@@ -52,10 +52,13 @@ ui <- fluidPage(
                       actionButton("addnewrowtocensus", "add new row")
              ),
              tabPanel("diagnostics",
+                      h4("focal session overview:"),
                       tableOutput("filenames_used"),
-                      span("links to the generated csv files (per focal session):"),
+                      h4("links to the generated csv files (per focal session):"),
                       uiOutput("filenames_links"),
-                      hr(),
+                      h4("current working directory"),
+                      verbatimTextOutput("current_wd"),
+                      h4("R session info"),
                       verbatimTextOutput("rsession_info")
              ),
              tabPanel("debugging",
@@ -68,6 +71,9 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  # create folder file storage
+  if (!dir.exists("www")) dir.create("www")
+  
   # xdata: for daily info (group, observer, date)
   xdata <- reactiveValues(presence = all_individuals, get_started = FALSE)
   # v: for a single focal session 
@@ -214,6 +220,7 @@ server <- function(input, output, session) {
   })
   
   output$rsession_info <- renderPrint(sessionInfo())
+  output$current_wd <- renderPrint(getwd())
 }
 
 # Run the application

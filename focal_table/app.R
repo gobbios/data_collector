@@ -8,6 +8,7 @@ library(rhandsontable)
 
 source("../helpers/empty_foc_table.R")
 source("../helpers/focal_start_session_dialog.R")
+source("../helpers/focal_start_session.R")
 
 all_individuals <- read.csv("../id_table.csv", stringsAsFactors = FALSE)
 activity_codes <- c("r", "fe", "gr")

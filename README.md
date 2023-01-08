@@ -18,5 +18,6 @@ There are a few smaller examples that allow testing/debugging of smaller compone
 
 ```
 shiny::runGitHub("data_collector", "gobbios", subdir="hot_example")
+shiny::runGitHub("data_collector", "gobbios", subdir="focal_table") # might only work locally
 ```
 

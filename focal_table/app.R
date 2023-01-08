@@ -69,8 +69,7 @@ server <- function(input, output, session) {
         showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == input$group]))
         # updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
       }
-    }
-    )
+    })
     
     remcols <- c("time_stamp", "sample")
     output$focal_table <- renderRHandsontable({

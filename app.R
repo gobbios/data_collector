@@ -44,7 +44,7 @@ server <- function(input, output, session) {
   showModal(modalDialog(title = "hello there, what's up today?",
     dateInput("date", "date"),
     selectInput("observer", "observer", choices = unique(all_observers)),
-    selectInput("group", "group", choices = c(unique(all_individuals$group))),
+    selectInput("group", "group", choices = c(all_individuals$group)),
     footer = tagList(
       # modalButton("Cancel"),
       actionButton("startnewday_ok", "OK"),

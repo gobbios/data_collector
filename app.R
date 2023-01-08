@@ -7,6 +7,8 @@ library(rhandsontable)
 source("helpers/empty_foc_table.R")
 source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
+source("helpers/adlib_aggression_dyadic_dialog.R")
+source("helpers/empty_adlib_table.R")
 
 
 # individual table 
@@ -29,12 +31,15 @@ ui <- fluidPage(
                       ),
                       column(10, "",
                              actionButton(inputId = "start_focal_session_dialog_btn", label = "start focal session", style = "background: rgba(255, 0, 0, 0.5); height:100px"),
-                             actionButton(inputId = "go_to_census_btn", label = "go to census panel", style = "background: rgba(155, 0, 0, 0.5); height:50px")
+                             actionButton(inputId = "go_to_census_btn", label = "go to census panel", style = "background: rgba(155, 0, 0, 0.5); height:50px"),
+                             hr(),
+                             h3("adlib events, IGE, etc"),
+                             actionButton(inputId = "adlib_aggression_dialog", label = "dyadic aggression", style = "background: rgba(0, 0, 0, 0.5)")
+                             
                       )
              ),
              tabPanel("focal",
                       column(2, "",
-                             
                              # actionButton("record_focal_aggr", "aggression"),
                              # actionButton("record_focal_groom_start", "grooming start"),
                              # actionButton("record_focal_groom_change", "grooming switch/end"),
@@ -62,6 +67,8 @@ ui <- fluidPage(
                       verbatimTextOutput("rsession_info")
              ),
              tabPanel("debugging",
+                      h4("current adlib aggression:"),
+                      tableOutput("debug_adlib_aggression"),
                       h4("current focal table in static form"),
                       tableOutput("static_foctab")
              )
@@ -84,7 +91,8 @@ server <- function(input, output, session) {
                       session_is_active = FALSE)
   # monitor sessions across day
   daily_sessions <- reactiveValues(sessions_over_day =matrix(ncol = 3, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id"))))
-
+  # adlib aggression data
+  adlib_agg <- reactiveValues(dyadic = empty_adlib_table())
  
   
   observeEvent(input$start_focal_session_dialog_btn, {
@@ -214,11 +222,26 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  observeEvent(input$adlib_aggression_dialog, {
+    showModal(adlib_aggression_dyadic_dialog()) # submit button in dialog: 'adlib_aggression'
+  })
+  observeEvent(input$adlib_aggression, {
+    adlib_agg$dyadic <- rbind(NA, adlib_agg$dyadic)
+    adlib_agg$dyadic$time_stamp[1] <- input$adlib_aggression_dyadic_datetime
+    adlib_agg$dyadic$id1[1] <- input$adlib_aggression_dyadic_id1
+    adlib_agg$dyadic$id2[1] <- input$adlib_aggression_dyadic_id2
+    adlib_agg$dyadic$highest_intensity[1] <- input$adlib_aggression_dyadic_intensity
+    removeModal()
+  })
+
   observeEvent(input$go_to_census_btn, {
-    updateTabsetPanel(session, inputId = "nav_home", selected = "census")
+    updateTabsetPanel(session, inputId = "nav_home", selected = "census") # shift focus to census tab
   })
   
+  
+  
+  # simple debuggging/diagnostics elements
+  output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
   output$rsession_info <- renderPrint(sessionInfo())
   output$current_wd <- renderPrint(getwd())
 }

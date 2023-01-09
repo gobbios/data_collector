@@ -9,6 +9,7 @@ source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
 source("helpers/adlib_aggression_dyadic_dialog.R")
 source("helpers/empty_adlib_table.R")
+source("helpers/add_one_minute.R")
 
 
 # individual table
@@ -19,7 +20,7 @@ all_individuals$comment <- ""
 # list with observers (to be outsourced to csv file eventually)
 all_observers <- c("maria", "carel", "jeanne")
 # list with all activity codes for point sampling
-activity_codes <- c("r", "fe", "gr")
+activity_codes <- c("r", "fe", "gr", "oos")
 
 
 
@@ -40,6 +41,7 @@ ui <- fluidPage(
              ),
              tabPanel("focal",
                       column(2, "",
+                             textOutput("focal_dur_progress"),
                              # actionButton("record_focal_aggr", "aggression"),
                              # actionButton("record_focal_groom_start", "grooming start"),
                              # actionButton("record_focal_groom_change", "grooming switch/end"),
@@ -88,9 +90,11 @@ server <- function(input, output, session) {
                       session_start = Sys.time(),
                       focal_id = NULL,
                       focal_session_identifier = NULL,
-                      session_is_active = FALSE)
+                      session_is_active = FALSE,
+                      table_lines = NULL,
+                      suda_done = 0)
   # monitor sessions across day
-  daily_sessions <- reactiveValues(sessions_over_day =matrix(ncol = 3, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id"))))
+  daily_sessions <- reactiveValues(sessions_over_day = matrix(ncol = 3, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id"))))
   # adlib aggression data
   adlib_agg <- reactiveValues(dyadic = empty_adlib_table())
 
@@ -113,9 +117,10 @@ server <- function(input, output, session) {
   observeEvent(input$focal_session_start, {
     # reset
     # events_grooming$grooming_in_progress <- FALSE
-    eft <- empty_foc_table(start_time = strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"), duration = 7, id = input$focal_name, activity_codes = activity_codes)
+    eft <- empty_foc_table(start_time = strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"), duration = input$focal_duration, id = input$focal_name, activity_codes = activity_codes)
     v$foctab <- eft
     v$focal_id <- input$focal_name
+    v$table_lines <- input$focal_duration
     v$session_is_active <- TRUE
     s <- paste(sample(c(letters, 0:9), 8, replace = TRUE), collapse = "")
     v$focal_session_identifier <- s
@@ -139,7 +144,8 @@ server <- function(input, output, session) {
   remcols <- c("time_stamp", "sample")
   output$focal_table <- renderRHandsontable({
     if (!is.null(v$foctab)) {
-      outtab <- v$foctab[, -c(which(colnames(v$foctab) %in% remcols))]
+      # outtab <- v$foctab[, -c(which(colnames(v$foctab) %in% remcols))]
+      outtab <- v$foctab
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
       # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
@@ -151,10 +157,34 @@ server <- function(input, output, session) {
     xxx <- hot_to_r(input$focal_table)
     write.table(data.frame(time_stamp = v$foctab$time_stamp, xxx), file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
+
+    # update 'timer'
+    v$suda_done <- sum(xxx$activity != "oos", na.rm = TRUE)
+    # add rows if required
+    # automated better than manually via addrow-button
+    if (nrow(xxx) >= input$focal_duration) {
+
+    }
+
+    # browser()
+    v$foctab <- xxx
+  })
+  # progress tracker for session
+  observeEvent(v$suda_done, {
+    if (v$suda_done > 0) {
+      output$focal_dur_progress <- renderText(paste(v$suda_done, "of", input$focal_duration, "done"))
+    } else {
+      output$focal_dur_progress <- NULL
+    }
   })
   observeEvent(input$addnewrowtofoctab, {
     if (!is.null(v$foctab) & v$session_is_active == TRUE) {
-      v$foctab <- rbind(v$foctab, NA)
+      # v$foctab <- rbind(v$foctab, NA)
+      xxx <- hot_to_r(input$focal_table)
+      xxx <- rbind(xxx, empty_foc_table(start_time = Sys.time(), duration = 1, id = input$focal_name, activity_codes = activity_codes))
+      xxx$sample[nrow(xxx)] <- nrow(xxx)
+      xxx$time_for_display[nrow(xxx)] <- add_one_minute(xxx$time_for_display[nrow(xxx) - 1])
+      v$foctab <- xxx
     }
   })
   observeEvent(input$finish_focal_session, {
@@ -168,7 +198,9 @@ server <- function(input, output, session) {
     v$focal_id = NULL
     v$focal_session_identifier = NULL
     v$session_is_active = FALSE
-
+    v$suda_done <- 0
+    v$table_lines <- NULL
+    updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
   })
 
 
@@ -183,7 +215,7 @@ server <- function(input, output, session) {
     selectInput("group", "group", choices = c(all_individuals$group)),
     footer = tagList(
       # modalButton("Cancel"),
-      actionButton("startnewday_ok", "OK"),
+      actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
       HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
     )
   ))

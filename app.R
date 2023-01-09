@@ -11,7 +11,7 @@ source("helpers/adlib_aggression_dyadic_dialog.R")
 source("helpers/empty_adlib_table.R")
 
 
-# individual table 
+# individual table
 all_individuals <- read.csv("id_table.csv", stringsAsFactors = FALSE)
 all_individuals$present <- FALSE
 all_individuals$swelling <- factor(NA, levels = 1:3)
@@ -30,12 +30,12 @@ ui <- fluidPage(
                              htmlOutput("dategroupobs")
                       ),
                       column(10, "",
-                             actionButton(inputId = "start_focal_session_dialog_btn", label = "start focal session", style = "background: rgba(255, 0, 0, 0.5); height:100px"),
+                             actionButton(inputId = "start_focal_session_dialog_btn", label = "start focal session", style = "background: rgba(255, 0, 0, 0.5); height:100px", icon = icon("hourglass-start")),
                              actionButton(inputId = "go_to_census_btn", label = "go to census panel", style = "background: rgba(155, 0, 0, 0.5); height:50px"),
                              hr(),
                              h3("adlib events, IGE, etc"),
                              actionButton(inputId = "adlib_aggression_dialog", label = "dyadic aggression", style = "background: rgba(0, 0, 0, 0.5)")
-                             
+
                       )
              ),
              tabPanel("focal",
@@ -72,7 +72,7 @@ ui <- fluidPage(
                       h4("current focal table in static form"),
                       tableOutput("static_foctab")
              )
-             
+
   )
 )
 
@@ -80,12 +80,12 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   # create folder file storage
   if (!dir.exists("www")) dir.create("www")
-  
+
   # xdata: for daily info (group, observer, date)
   xdata <- reactiveValues(presence = all_individuals, get_started = FALSE)
-  # v: for a single focal session 
+  # v: for a single focal session
   v <- reactiveValues(foctab = NULL, # the actual data table
-                      session_start = Sys.time(), 
+                      session_start = Sys.time(),
                       focal_id = NULL,
                       focal_session_identifier = NULL,
                       session_is_active = FALSE)
@@ -93,8 +93,8 @@ server <- function(input, output, session) {
   daily_sessions <- reactiveValues(sessions_over_day =matrix(ncol = 3, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id"))))
   # adlib aggression data
   adlib_agg <- reactiveValues(dyadic = empty_adlib_table())
- 
-  
+
+
   observeEvent(input$start_focal_session_dialog_btn, {
     # check whether a session is already running
     print(paste("session is active:", v$session_is_active, "\n"))
@@ -109,7 +109,7 @@ server <- function(input, output, session) {
       updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
     }
   })
-  
+
   observeEvent(input$focal_session_start, {
     # reset
     # events_grooming$grooming_in_progress <- FALSE
@@ -128,14 +128,14 @@ server <- function(input, output, session) {
     daily_sessions$sessions_over_day[1, "session"] <- v$focal_session_identifier
     daily_sessions$sessions_over_day[1, "filename"] <- v$filename
     daily_sessions$sessions_over_day[1, "focal_id"] <- v$focal_id
-    
+
     output$filenames_used <- renderTable({daily_sessions$sessions_over_day})
     output$filenames_links <- renderText({
       sapply(daily_sessions$sessions_over_day[, "session", drop = TRUE], function(y)HTML(paste(a(y, href = paste0(y, ".csv")))))
     })
     removeModal()
   })
-  
+
   remcols <- c("time_stamp", "sample")
   output$focal_table <- renderRHandsontable({
     if (!is.null(v$foctab)) {
@@ -151,7 +151,7 @@ server <- function(input, output, session) {
     xxx <- hot_to_r(input$focal_table)
     write.table(data.frame(time_stamp = v$foctab$time_stamp, xxx), file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
-  })     
+  })
   observeEvent(input$addnewrowtofoctab, {
     if (!is.null(v$foctab) & v$session_is_active == TRUE) {
       v$foctab <- rbind(v$foctab, NA)
@@ -168,14 +168,14 @@ server <- function(input, output, session) {
     v$focal_id = NULL
     v$focal_session_identifier = NULL
     v$session_is_active = FALSE
-    
+
   })
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
   showModal(modalDialog(title = "hello there, what's up today?",
                         span("please provide the necessary information"), hr(),
     dateInput("date", "date"),
@@ -191,8 +191,8 @@ server <- function(input, output, session) {
     xdata$presence <- xdata$presence[xdata$presence$group == input$group, ] # select relevant group...
     xdata$get_started <- TRUE
     output$dategroupobs <- renderText({
-      paste("<p>selected group:", "<b>", input$group, "</b></p>", "<hr>", 
-            "<p>selected date:<b>", as.character(input$date), "</b></p>", "<hr>", 
+      paste("<p>selected group:", "<b>", input$group, "</b></p>", "<hr>",
+            "<p>selected date:<b>", as.character(input$date), "</b></p>", "<hr>",
             "<p>selected observer:<b>", as.character(input$observer), "</b></p>")
     })
     removeModal()
@@ -221,7 +221,7 @@ server <- function(input, output, session) {
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
     }
   })
-  
+
   observeEvent(input$adlib_aggression_dialog, {
     showModal(adlib_aggression_dyadic_dialog()) # submit button in dialog: 'adlib_aggression'
   })
@@ -237,9 +237,9 @@ server <- function(input, output, session) {
   observeEvent(input$go_to_census_btn, {
     updateTabsetPanel(session, inputId = "nav_home", selected = "census") # shift focus to census tab
   })
-  
-  
-  
+
+
+
   # simple debuggging/diagnostics elements
   output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
   output$rsession_info <- renderPrint(sessionInfo())

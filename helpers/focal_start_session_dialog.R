@@ -6,7 +6,7 @@ focal_start_session_dialog <- function(potential_focals = NULL) {
 
     selectInput('focal_name', "focal subject", choices = c("_none", potential_focals), selected = "_none"),
     textInput('focal_start', 'focal start time', value = Sys.time() + 60),
-    numericInput('focal_duration', 'focal duration', value = 10, min = 10, max = 60, step = 5),
+    numericInput('focal_duration', 'focal duration', value = 6, min = 2, max = 10, step = 2),
 
     footer = tagList(
       actionButton("focal_session_start", "START", icon = icon("rocket"), style = "background: rgba(0, 255, 0, 0.5); height:100px"),

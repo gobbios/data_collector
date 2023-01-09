@@ -18,7 +18,7 @@ all_individuals$present <- FALSE
 all_individuals$swelling <- factor(NA, levels = 1:3)
 all_individuals$comment <- ""
 # list with observers (to be outsourced to csv file eventually)
-all_observers <- c("maria", "carel", "jeanne")
+all_observers <- c("maria", "carel", "jeanne", "robert", "joan", "julia")
 # list with all activity codes for point sampling
 activity_codes <- c("r", "fe", "gr", "oos")
 
@@ -45,7 +45,6 @@ ui <- fluidPage(
                              # actionButton("record_focal_aggr", "aggression"),
                              # actionButton("record_focal_groom_start", "grooming start"),
                              # actionButton("record_focal_groom_change", "grooming switch/end"),
-                             actionButton("addnewrowtofoctab", "add new row"),
                              actionButton("finish_focal_session", "finish session")
                       ),
                       column(10, "",
@@ -72,6 +71,7 @@ ui <- fluidPage(
                       h4("current adlib aggression:"),
                       tableOutput("debug_adlib_aggression"),
                       h4("current focal table in static form"),
+                      htmlOutput("debug_foctab_progress"),
                       tableOutput("static_foctab")
              )
 
@@ -91,8 +91,7 @@ server <- function(input, output, session) {
                       focal_id = NULL,
                       focal_session_identifier = NULL,
                       session_is_active = FALSE,
-                      table_lines = NULL,
-                      suda_done = 0)
+                      progress = NULL)
   # monitor sessions across day
   daily_sessions <- reactiveValues(sessions_over_day = matrix(ncol = 3, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id"))))
   # adlib aggression data
@@ -120,7 +119,7 @@ server <- function(input, output, session) {
     eft <- empty_foc_table(start_time = strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"), duration = input$focal_duration, id = input$focal_name, activity_codes = activity_codes)
     v$foctab <- eft
     v$focal_id <- input$focal_name
-    v$table_lines <- input$focal_duration
+    v$progress <- list(target = input$focal_duration, table_lines = input$focal_duration, na_vals = input$focal_duration, oos = 0, act = 0)
     v$session_is_active <- TRUE
     s <- paste(sample(c(letters, 0:9), 8, replace = TRUE), collapse = "")
     v$focal_session_identifier <- s
@@ -155,38 +154,43 @@ server <- function(input, output, session) {
   })
   observeEvent(input$focal_table, {
     xxx <- hot_to_r(input$focal_table)
-    write.table(data.frame(time_stamp = v$foctab$time_stamp, xxx), file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(xxx, file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
 
-    # update 'timer'
-    v$suda_done <- sum(xxx$activity != "oos", na.rm = TRUE)
+
+    # update progress tracker
     # add rows if required
     # automated better than manually via addrow-button
-    if (nrow(xxx) >= input$focal_duration) {
-
+    v$progress$oos <- sum(xxx$activity %in% "oos")
+    v$progress$act <- sum(xxx$activity %in% activity_codes) - v$progress$oos
+    v$progress$na_vals <- sum(is.na(xxx$activity))
+    v$progress$table_lines <- nrow(xxx)
+    if (v$progress$act < v$progress$target & !is.na(xxx$activity[nrow(xxx)])) {
+      xxx <- rbind(xxx, empty_foc_table(start_time = Sys.time(), duration = 1, id = input$focal_name, activity_codes = activity_codes))
+      xxx$sample[nrow(xxx)] <- nrow(xxx)
+      xxx$time_for_display[nrow(xxx)] <- add_one_minute(xxx$time_for_display[nrow(xxx) - 1])
+      v$progress$table_lines <- nrow(xxx) + 1
+      Sys.sleep(1)
     }
 
     # browser()
     v$foctab <- xxx
+    output$debug_foctab_progress <- renderUI({
+      HTML(paste("activity samples:", v$progress$act, "<br>", "oos samples:", v$progress$oos, "<br>",
+                 "NA samples:", v$progress$na_vals, "<br>", "target:", v$progress$target, "<br>", "num rows in table:", v$progress$table_lines))
+    })
+
+
   })
   # progress tracker for session
-  observeEvent(v$suda_done, {
-    if (v$suda_done > 0) {
-      output$focal_dur_progress <- renderText(paste(v$suda_done, "of", input$focal_duration, "done"))
+  observeEvent(v$progress$act, {
+    if (v$progress$act > 0) {
+      output$focal_dur_progress <- renderText(paste(v$progress$act, "of", input$focal_duration, "done"))
     } else {
       output$focal_dur_progress <- NULL
     }
   })
-  observeEvent(input$addnewrowtofoctab, {
-    if (!is.null(v$foctab) & v$session_is_active == TRUE) {
-      # v$foctab <- rbind(v$foctab, NA)
-      xxx <- hot_to_r(input$focal_table)
-      xxx <- rbind(xxx, empty_foc_table(start_time = Sys.time(), duration = 1, id = input$focal_name, activity_codes = activity_codes))
-      xxx$sample[nrow(xxx)] <- nrow(xxx)
-      xxx$time_for_display[nrow(xxx)] <- add_one_minute(xxx$time_for_display[nrow(xxx) - 1])
-      v$foctab <- xxx
-    }
-  })
+
   observeEvent(input$finish_focal_session, {
     temp_object <- v$foctab
     temp_object$time_stamp <- as.character(temp_object$time_stamp)
@@ -198,8 +202,7 @@ server <- function(input, output, session) {
     v$focal_id = NULL
     v$focal_session_identifier = NULL
     v$session_is_active = FALSE
-    v$suda_done <- 0
-    v$table_lines <- NULL
+    v$progress <- NULL
     updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
   })
 
@@ -211,7 +214,7 @@ server <- function(input, output, session) {
   showModal(modalDialog(title = "hello there, what's up today?",
                         span("please provide the necessary information"), hr(),
     dateInput("date", "date"),
-    selectInput("observer", "observer", choices = unique(all_observers)),
+    selectInput("observer", "observer", choices = unique(sample(all_observers))),
     selectInput("group", "group", choices = c(all_individuals$group)),
     footer = tagList(
       # modalButton("Cancel"),
@@ -229,24 +232,32 @@ server <- function(input, output, session) {
     })
     removeModal()
   })
-  observe({
-    hot = isolate(input$census_table)
-    if (!is.null(hot)) {
-      if (nrow(hot_to_r(input$census_table)) > 0) {
-        xdata$presence$present <- hot_to_r(input$census_table)$present
-      }
+
+  observeEvent(input$census_table, {
+    print(paste("presence is NULL:", is.null(xdata$presence), "\n"))
+    print(paste("day got started:", xdata$get_started, "\n"))
+    xxx <- hot_to_r(input$census_table)
+    print(paste("nrow presence:", nrow(xxx), "\n"))
+    if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
+      xxx <- hot_to_r(input$census_table)
+      write.table(xxx, file = "www/census.csv", sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     }
   })
   observeEvent(input$addnewrowtocensus, {
     if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
-      xdata$presence <- rbind(xdata$presence, NA)
-      xdata$presence$present[nrow(xdata$presence)] <- FALSE
-      xdata$presence$group[nrow(xdata$presence)] <- xdata$presence$group[1]
+      xxx <- hot_to_r(input$census_table)
+      xxx <- rbind(xxx, NA)
+      xxx$present[nrow(xxx)] <- FALSE
+      xxx$group[nrow(xxx)] <- xxx$group[1]
+      xdata$presence <- xxx
     }
   })
-  output$census_table = renderRHandsontable({
+
+
+  output$census_table <- renderRHandsontable({
     if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
-      xtab <- rhandsontable(xdata$presence[, -c(which(colnames(xdata$presence) %in% c("is_focal", "sex")))], rowHeaders = NULL)
+      xtab <- rhandsontable(xdata$presence, rowHeaders = NULL)
+      # xtab <- rhandsontable(xdata$presence[, -c(which(colnames(xdata$presence) %in% c("is_focal", "sex")))], rowHeaders = NULL)
       # xtab <- hot_row(xtab, c(1,3, 5), readOnly = TRUE)
       # xtab <- hot_col(xtab, c(1), readOnly = TRUE)
       # xtab <- hot_col(xtab, c(1), readOnly = TRUE)

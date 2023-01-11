@@ -41,10 +41,7 @@ myrender <- function(ids, marked, sex, do_which = c("f", "m", "o")) {
   o <- apply(pmat, 2, function(Y) {
     column(2, lapply(na.omit(Y), function(X) tagAppendAttributes(checkboxInput(btn_ids[X], ids[X], value = marked[X]), class = xclass[X])))
   })
-
-  # tagAppendAttributes(fluidRow(o))
   o
-
 }
 
 

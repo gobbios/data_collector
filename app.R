@@ -14,6 +14,7 @@ source("helpers/focal_grooming_start_dialog.R")
 source("helpers/focal_grooming_change_dialog.R")
 source("helpers/empty_grooming.R")
 source("helpers/focal_aggression_dialog.R")
+source("helpers/render_nn.R")
 
 
 # individual table
@@ -32,6 +33,13 @@ groompartners_temp <- LETTERS
 
 
 ui <- fluidPage(
+  tags$style(HTML(".bg-f { background-color: rgba(255, 0, 0, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large; } # input[type='checkbox']{ width: 30px; height: 30px; line-height: 30px;}")),
+  tags$style(HTML(".bg-fsel { background-color: rgba(255, 0, 0, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large;}")),
+  tags$style(HTML(".bg-m { background-color: rgba(0, 0, 255, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-msel { background-color: rgba(0, 0, 255, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-o { background-color: rgba(10, 10, 10, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-osel { background-color: rgba(10, 10, 10, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
+  
   tags$head(
     # Note the wrapping of the string in HTML()
     tags$style(HTML("
@@ -66,6 +74,8 @@ ui <- fluidPage(
                              hr(),
                              actionButton("record_focal_aggr", "aggression (or some other event)"),
                              hr(),
+                             actionButton("nn_scan", "nearest neighbour 'scan'"),
+                             hr(),
                              actionButton("finish_focal_session", "finish session")
                       ),
                       column(10, "",
@@ -77,6 +87,31 @@ ui <- fluidPage(
              tabPanel("census",
                       rHandsontableOutput("census_table"),
                       actionButton("addnewrowtocensus", "add new row")
+             ),
+             
+             tabPanel("nearest neighbors",
+                      actionButton("submit_nn", "submit scan"),
+                      p(),
+                      fluidRow(htmlOutput("nn_fem")),
+                      p(),
+                      fluidRow(htmlOutput("nn_male")),
+                      p(),
+                      fluidRow(htmlOutput("nn_other"))
+                      
+                      
+                      
+             ),
+             tabPanel("review data",
+                        span("currently a placeholder"),
+                      selectInput("session_for_review", label = "select session", choices = c("one", "or", "the", "other")),
+                      navlistPanel(widths = c(2, 10),
+                                   tabPanel("focal (point samples)"),
+                                   tabPanel("aggression"),
+                                   tabPanel("grooming"),
+                                   tabPanel("neighbors")
+                                   
+                      )
+                        
              ),
              tabPanel("diagnostics",
                       h4("focal session overview:"),
@@ -131,7 +166,79 @@ server <- function(input, output, session) {
                                     withinsession_num = 1,
                                     withinevent_num = 1,
                                     grooming = empty_grooming())
-
+  # nearest neighbors
+  nn <- reactiveValues(ini_state = NULL,# setNames(rep(FALSE, n), ids)
+                       firstrun = TRUE,
+                       sex = NULL,
+                       ids = NULL) 
+  
+  
+  
+  
+  
+  # nearest neighbors -------------------------
+  nn_reactive <- reactive({
+    # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    if (v$session_is_active) {
+      o <- setNames(unlist(lapply(1:length(nn$ids), function(X) {
+        input[[paste0("id_", nn$ids[X])]]
+      })), nn$ids)
+    }
+    
+  })
+  
+  observeEvent(input$nn_scan, {
+    updateTabsetPanel(session, inputId = "nav_home", selected = "nearest neighbors")
+    
+    print(nn_reactive())
+  })
+  
+  output$nn_fem <- renderUI({
+    ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    if (nn$firstrun) {
+      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
+    } else {
+      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
+    }
+  })
+  output$nn_male <- renderUI({
+    ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    if (nn$firstrun) {
+      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
+    } else {
+      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
+    }
+  })
+  output$nn_other <- renderUI({
+    ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    if (nn$firstrun) {
+      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
+    } else {
+      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
+    }
+  })
+  
+  observe({
+    if (v$session_is_active) {
+    lapply(isolate(nn$ids), function(X) {
+      observeEvent(input[[paste0("id_", X)]], {
+        if (X == nn$ids[length(nn$ids)]) {
+          nn$firstrun <- FALSE
+          nn$ini_state <- nn_reactive()
+        }
+      })
+    })
+    }
+  })
+  # 
+  observeEvent(input$submit_nn, {
+    print(nn$ini_state)
+    print(nn_reactive())
+  })
+  
+  
+  
+  
   # grooming -----------------------
   observeEvent(input$record_focal_groom_start_btn, {
     if (events_grooming$grooming_in_progress == TRUE) {
@@ -276,6 +383,13 @@ server <- function(input, output, session) {
       sapply(daily_sessions$sessions_over_day[, "session", drop = TRUE], function(y)HTML(paste(a(y, href = paste0(y, ".csv")))))
     })
     removeModal()
+    
+    # set nn data
+    # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    nn$ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
+    nn$sex <- c(all_individuals$sex[all_individuals$group == input$group], rep("o", 24))
+    
   })
 
   remcols <- c("time_stamp", "sample")

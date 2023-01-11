@@ -330,18 +330,20 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$finish_focal_session, {
-    temp_object <- v$foctab
-    temp_object$time_stamp <- as.character(temp_object$time_stamp)
-    write.csv(temp_object, file = v$filename, row.names = FALSE, quote = FALSE)
-    system2(command = "open", shQuote(v$filename))
-    # reset reactive values object
-    v$foctab = NULL # the actual data table
-    v$session_start = Sys.time()
-    v$focal_id = NULL
-    v$focal_session_identifier = NULL
-    v$session_is_active = FALSE
-    v$progress <- NULL
-    updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
+    if (v$session_is_active) {
+      temp_object <- v$foctab
+      temp_object$time_stamp <- as.character(temp_object$time_stamp)
+      write.csv(temp_object, file = v$filename, row.names = FALSE, quote = FALSE)
+      system2(command = "open", shQuote(v$filename))
+      # reset reactive values object
+      v$foctab = NULL # the actual data table
+      v$session_start = Sys.time()
+      v$focal_id = NULL
+      v$focal_session_identifier = NULL
+      v$session_is_active = FALSE
+      v$progress <- NULL
+      updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
+    }
   })
 
 

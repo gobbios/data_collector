@@ -23,7 +23,11 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       actionButton("submit", "submit"),
-      verbatimTextOutput("results")
+      actionButton("reset", "reset"),
+      verbatimTextOutput("results"),
+
+      checkboxInput("display", "display boxes", value = FALSE)
+
     ),
 
     mainPanel(
@@ -48,20 +52,23 @@ server <- function(input, output, session) {
     # myrender(ids, marked = v$ini_state)
     # HTML(paste( myrender(ids, marked = marked)))
     # HTML(paste(myrender(ids, marked = v$ini_state)[[1]]))
-
-    if (v$firstrun) {
-      lapply(myrender(ids, marked = v$ini_state, sex = sex), function(X) HTML(paste(X)))
-    } else {
-      lapply(myrender(ids, marked = m(), sex = sex), function(X) HTML(paste(X)))
+    if (input$display) {
+      if (v$firstrun) {
+        lapply(myrender(ids, marked = v$ini_state, sex = sex), function(X) HTML(paste(X)))
+      } else {
+        lapply(myrender(ids, marked = m(), sex = sex), function(X) HTML(paste(X)))
+      }
     }
+
   })
 
   lapply(ids, function(X) {
     observeEvent(input[[paste0("id_", X)]], {
       if (X == ids[length(ids)]) {
         v$firstrun <- FALSE
-        v$ini_state <- m()
+
       }
+      v$ini_state <- m()
     })
   })
 
@@ -70,6 +77,16 @@ server <- function(input, output, session) {
     res <- names(x)[x]
     output$results <- renderText(res)
   })
+
+  observeEvent(input$reset, {
+    print(v$ini_state)
+    v$ini_state <- setNames(rep(FALSE, n), ids)
+    v$firstrun <- TRUE
+    print(v$ini_state)
+    print(m())
+  })
+
+
 }
 
 shinyApp(ui = ui, server = server)

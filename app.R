@@ -39,7 +39,7 @@ ui <- fluidPage(
   tags$style(HTML(".bg-msel { background-color: rgba(0, 0, 255, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
   tags$style(HTML(".bg-o { background-color: rgba(10, 10, 10, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
   tags$style(HTML(".bg-osel { background-color: rgba(10, 10, 10, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
-  
+
   tags$head(
     # Note the wrapping of the string in HTML()
     tags$style(HTML("
@@ -57,6 +57,7 @@ ui <- fluidPage(
                              htmlOutput("dategroupobs")
                       ),
                       column(10, "",
+                             # HTML('<p style= "color: red">bla</p>'),
                              actionButton(inputId = "start_focal_session_dialog_btn", label = "start focal session", style = "background: rgba(255, 0, 0, 0.5); height:100px", icon = icon("hourglass-start")),
                              actionButton(inputId = "go_to_census_btn", label = "go to census panel", style = "background: rgba(155, 0, 0, 0.5); height:50px"),
                              hr(),
@@ -79,6 +80,7 @@ ui <- fluidPage(
                              actionButton("finish_focal_session", "finish session")
                       ),
                       column(10, "",
+                             span(HTML("<p style='color:Khaki;'>the first two columns will eventually be hidden; other columns can be added as required; names can be changed</p>")),
                              conditionalPanel(condition = 'output.panelStatus', tagAppendAttributes(tag = textOutput("focal_grooming_in_progress"), class = 'blink_me')),
                              # conditionalPanel(condition = 'output.panelStatus', tagAppendAttributes(tag = textOutput("focal_grooming_in_progress"))),
                              rHandsontableOutput("focal_table")
@@ -88,7 +90,7 @@ ui <- fluidPage(
                       rHandsontableOutput("census_table"),
                       actionButton("addnewrowtocensus", "add new row")
              ),
-             
+
              tabPanel("nearest neighbors",
                       actionButton("submit_nn", "submit scan"),
                       p(),
@@ -97,21 +99,25 @@ ui <- fluidPage(
                       fluidRow(htmlOutput("nn_male")),
                       p(),
                       fluidRow(htmlOutput("nn_other"))
-                      
-                      
-                      
+
+
+
              ),
              tabPanel("review data",
-                        span("currently a placeholder"),
+                      span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
                       selectInput("session_for_review", label = "select session", choices = c("one", "or", "the", "other")),
+                      # selectInput("session_for_review", label = "select session", choices = select_for_revision()),
+
                       navlistPanel(widths = c(2, 10),
-                                   tabPanel("focal (point samples)"),
+                                   tabPanel("focal (point samples)",
+                                            rHandsontableOutput("rev_focal_table")),
                                    tabPanel("aggression"),
                                    tabPanel("grooming"),
-                                   tabPanel("neighbors")
-                                   
+                                   tabPanel("neighbors",
+                                            rHandsontableOutput("rev_nn"))
+
                       )
-                        
+
              ),
              tabPanel("diagnostics",
                       h4("focal session overview:"),
@@ -170,13 +176,46 @@ server <- function(input, output, session) {
   nn <- reactiveValues(ini_state = NULL,# setNames(rep(FALSE, n), ids)
                        firstrun = TRUE,
                        sex = NULL,
-                       ids = NULL) 
-  
-  
-  
-  
-  
+                       ids = NULL,
+                       final = NULL)
+
+
+
+
+  # reviewing of existing data ---------------------------
+  output$rev_focal_table <- renderRHandsontable({
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, ".csv"))) {
+      outtab <- read.csv(paste0("www/", input$session_for_review, ".csv"))
+      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
+      # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
+      # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
+      outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
+      outtab
+    }
+  })
+  output$rev_nn <- renderRHandsontable({
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-nn.csv"))) {
+      outtab <- read.csv(paste0("www/", input$session_for_review, "-nn.csv"))
+      colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
+      print(head(outtab))
+      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
+      # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
+      # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
+      outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
+      outtab
+    }
+  })
+
+
+
   # nearest neighbors -------------------------
+  observeEvent(input$nn_scan, {
+    if (v$session_is_active) {
+      updateTabsetPanel(session, inputId = "nav_home", selected = "nearest neighbors")
+      # print(nn_reactive())
+    }
+  })
+
   nn_reactive <- reactive({
     # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (v$session_is_active) {
@@ -184,15 +223,37 @@ server <- function(input, output, session) {
         input[[paste0("id_", nn$ids[X])]]
       })), nn$ids)
     }
-    
   })
-  
-  observeEvent(input$nn_scan, {
-    updateTabsetPanel(session, inputId = "nav_home", selected = "nearest neighbors")
-    
-    print(nn_reactive())
+
+  observe({
+    if (v$session_is_active) {
+      lapply(isolate(nn$ids), function(X) {
+        observeEvent(input[[paste0("id_", X)]], {
+          if (X == nn$ids[length(nn$ids)]) {
+            nn$firstrun <- FALSE
+          }
+          nn$ini_state <- nn_reactive()
+        })
+      })
+    }
   })
-  
+
+  observeEvent(input$submit_nn, {
+    # store to reactive object
+    if (is.null(nn$final)) {
+      nn_final <- cbind(nn$ids, nn_reactive())
+    } else {
+      nn_final <- cbind(nn$final, nn_reactive())
+    }
+    nn$final <- nn_final
+    # reset for next scan:
+    nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
+    nn$firstrun <- TRUE
+  })
+
+
+
+
   output$nn_fem <- renderUI({
     ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (nn$firstrun) {
@@ -217,28 +278,11 @@ server <- function(input, output, session) {
       lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
     }
   })
-  
-  observe({
-    if (v$session_is_active) {
-    lapply(isolate(nn$ids), function(X) {
-      observeEvent(input[[paste0("id_", X)]], {
-        if (X == nn$ids[length(nn$ids)]) {
-          nn$firstrun <- FALSE
-          nn$ini_state <- nn_reactive()
-        }
-      })
-    })
-    }
-  })
-  # 
-  observeEvent(input$submit_nn, {
-    print(nn$ini_state)
-    print(nn_reactive())
-  })
-  
-  
-  
-  
+
+
+
+
+
   # grooming -----------------------
   observeEvent(input$record_focal_groom_start_btn, {
     if (events_grooming$grooming_in_progress == TRUE) {
@@ -332,9 +376,12 @@ server <- function(input, output, session) {
     events_grooming$withinevent_num <- 1
     output$debugging_groom <- renderTable(events_grooming$grooming[-1, ])
   })
+
   # other focal session EVENTS: -------------------
   observeEvent(input$record_focal_aggr, {
-    showModal(focal_aggression_dialog(focal_id = v$focal_id)) # submit button in dialog: 'focal_aggression'
+    if (v$session_is_active) {
+      showModal(focal_aggression_dialog(focal_id = v$focal_id)) # submit button in dialog: 'focal_aggression'
+    }
   })
 
 
@@ -383,13 +430,13 @@ server <- function(input, output, session) {
       sapply(daily_sessions$sessions_over_day[, "session", drop = TRUE], function(y)HTML(paste(a(y, href = paste0(y, ".csv")))))
     })
     removeModal()
-    
+
     # set nn data
     # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     nn$ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
     nn$sex <- c(all_individuals$sex[all_individuals$group == input$group], rep("o", 24))
-    
+
   })
 
   remcols <- c("time_stamp", "sample")
@@ -449,6 +496,9 @@ server <- function(input, output, session) {
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
       write.csv(temp_object, file = v$filename, row.names = FALSE, quote = FALSE)
       system2(command = "open", shQuote(v$filename))
+      # store nn object
+      write.csv(nn$final, file = paste0("www/", v$focal_session_identifier, "-nn.csv"), row.names = FALSE, quote = FALSE)
+
       # reset reactive values object
       v$foctab = NULL # the actual data table
       v$session_start = Sys.time()
@@ -457,6 +507,10 @@ server <- function(input, output, session) {
       v$session_is_active = FALSE
       v$progress <- NULL
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
+
+      # update list for revisions
+      updateSelectInput(inputId = "session_for_review", choices = as.character(daily_sessions$sessions_over_day[, "session"]))
+
     }
   })
 
@@ -464,12 +518,13 @@ server <- function(input, output, session) {
 
 
 
-
+  # start up message and setup -----------------------
   showModal(modalDialog(title = "hello there, what's up today?",
                         span("please provide the necessary information"), hr(),
     dateInput("date", "date"),
     selectInput("observer", "observer", choices = unique(sample(all_observers))),
-    selectInput("group", "group", choices = c(all_individuals$group)),
+    # selectInput("group", "group", choices = c(all_individuals$group)),
+    selectInput("group", "group", choices = unique(all_individuals$group), selected = "pb"),
     footer = tagList(
       # modalButton("Cancel"),
       actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
@@ -480,7 +535,7 @@ server <- function(input, output, session) {
     xdata$presence <- xdata$presence[xdata$presence$group == input$group, ] # select relevant group...
     xdata$get_started <- TRUE
     output$dategroupobs <- renderText({
-      paste("<p>selected group:", "<b>", input$group, "</b></p>", "<hr>",
+      paste("<p>selected group:", "<b style='color:red'>", input$group, "</b></p>", "<hr>",
             "<p>selected date:<b>", as.character(input$date), "</b></p>", "<hr>",
             "<p>selected observer:<b>", as.character(input$observer), "</b></p>")
     })

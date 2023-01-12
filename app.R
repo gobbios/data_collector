@@ -15,6 +15,7 @@ source("helpers/focal_grooming_change_dialog.R")
 source("helpers/empty_grooming.R")
 source("helpers/focal_aggression_dialog.R")
 source("helpers/render_nn.R")
+source("helpers/empty_focal_aggression_table.R")
 
 
 # individual table
@@ -111,8 +112,10 @@ ui <- fluidPage(
                       navlistPanel(widths = c(2, 10),
                                    tabPanel("focal (point samples)",
                                             rHandsontableOutput("rev_focal_table")),
-                                   tabPanel("aggression"),
-                                   tabPanel("grooming"),
+                                   tabPanel("aggression",
+                                            rHandsontableOutput("rev_aggression")),
+                                   tabPanel("grooming",
+                                            rHandsontableOutput("rev_groom")),
                                    tabPanel("neighbors",
                                             rHandsontableOutput("rev_nn"))
 
@@ -172,6 +175,8 @@ server <- function(input, output, session) {
                                     withinsession_num = 1,
                                     withinevent_num = 1,
                                     grooming = empty_grooming())
+  # focal session aggression
+  focal_aggression_data <- reactiveValues(aggression = empty_focal_aggression_table())
   # nearest neighbors
   nn <- reactiveValues(ini_state = NULL,# setNames(rep(FALSE, n), ids)
                        firstrun = TRUE,
@@ -194,9 +199,23 @@ server <- function(input, output, session) {
     }
   })
   output$rev_nn <- renderRHandsontable({
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-nn.csv"))) {
-      outtab <- read.csv(paste0("www/", input$session_for_review, "-nn.csv"))
-      colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
+    p <- paste0("www/", input$session_for_review, "-nn.csv")
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(p)) {
+      if (!isTRUE(readLines(p) == "")) {
+        outtab <- read.csv(p)
+        colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
+        print(head(outtab))
+        outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
+        # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
+        # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
+        outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
+        outtab
+      }
+    }
+  })
+  output$rev_groom <- renderRHandsontable({
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-groom.csv"))) {
+      outtab <- read.csv(paste0("www/", input$session_for_review, "-groom.csv"))[-1, ]
       print(head(outtab))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
@@ -205,8 +224,22 @@ server <- function(input, output, session) {
       outtab
     }
   })
-
-
+  output$rev_aggression <- renderRHandsontable({
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-aggr.csv"))) {
+      outtab <- read.csv(paste0("www/", input$session_for_review, "-aggr.csv"))[-1, ]
+      print(head(outtab))
+      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
+      # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
+      # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
+      outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
+      outtab
+    }
+  })
+  
+  
+  
+  
+  
 
   # nearest neighbors -------------------------
   observeEvent(input$nn_scan, {
@@ -255,27 +288,33 @@ server <- function(input, output, session) {
 
 
   output$nn_fem <- renderUI({
-    ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
-    if (nn$firstrun) {
-      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
-    } else {
-      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
+    # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
+    if (v$session_is_active) {
+      if (nn$firstrun) {
+        lapply(render_nn(nn$ids, selected = nn$ini_state, sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
+      } else {
+        lapply(render_nn(nn$ids, selected = nn_reactive(), sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
+      }
     }
   })
   output$nn_male <- renderUI({
     ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
-    if (nn$firstrun) {
-      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
-    } else {
-      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
+    if (v$session_is_active) {
+      if (nn$firstrun) {
+        lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
+      } else {
+        lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
+      }
     }
   })
   output$nn_other <- renderUI({
     ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
-    if (nn$firstrun) {
-      lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
-    } else {
-      lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
+    if (v$session_is_active) {
+      if (nn$firstrun) {
+        lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
+      } else {
+        lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
+      }
     }
   })
 
@@ -383,10 +422,17 @@ server <- function(input, output, session) {
       showModal(focal_aggression_dialog(focal_id = v$focal_id)) # submit button in dialog: 'focal_aggression'
     }
   })
-
-
-
-
+  observeEvent(input$focal_aggression, {
+    if (v$session_is_active) {
+      focal_aggression_data$aggression <- rbind(NA, focal_aggression_data$aggression)
+      focal_aggression_data$aggression$time_stamp[1] <- input$focal_aggression_dyadic_datetime
+      focal_aggression_data$aggression$focal[1] <- input$focal_aggression_dyadic_id1
+      focal_aggression_data$aggression$id2[1] <- input$focal_aggression_dyadic_id2
+      focal_aggression_data$aggression$highest_intensity[1] <- input$focal_aggression_dyadic_intensity
+      focal_aggression_data$aggression$focal_won[1] <- input$focal_aggression_dyadic_focal_won
+      removeModal()
+    }
+  })
 
 
 
@@ -489,7 +535,8 @@ server <- function(input, output, session) {
       output$focal_dur_progress <- NULL
     }
   })
-
+  
+  # end session -------------------------
   observeEvent(input$finish_focal_session, {
     if (v$session_is_active) {
       temp_object <- v$foctab
@@ -498,7 +545,13 @@ server <- function(input, output, session) {
       system2(command = "open", shQuote(v$filename))
       # store nn object
       write.csv(nn$final, file = paste0("www/", v$focal_session_identifier, "-nn.csv"), row.names = FALSE, quote = FALSE)
-
+      # store grooming
+      write.csv(events_grooming$grooming, file = paste0("www/", v$focal_session_identifier, "-groom.csv"), row.names = FALSE, quote = FALSE)
+      # store aggression
+      write.csv(focal_aggression_data$aggression, file = paste0("www/", v$focal_session_identifier, "-aggr.csv"), row.names = FALSE, quote = FALSE)
+      
+      
+      
       # reset reactive values object
       v$foctab = NULL # the actual data table
       v$session_start = Sys.time()

@@ -34,12 +34,12 @@ groompartners_temp <- LETTERS
 
 
 ui <- fluidPage(
-  tags$style(HTML(".bg-f { background-color: rgba(255, 0, 0, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large; } # input[type='checkbox']{ width: 30px; height: 30px; line-height: 30px;}")),
-  tags$style(HTML(".bg-fsel { background-color: rgba(255, 0, 0, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large;}")),
-  tags$style(HTML(".bg-m { background-color: rgba(0, 0, 255, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
-  tags$style(HTML(".bg-msel { background-color: rgba(0, 0, 255, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
-  tags$style(HTML(".bg-o { background-color: rgba(10, 10, 10, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
-  tags$style(HTML(".bg-osel { background-color: rgba(10, 10, 10, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-f { text-align: center; border-radius: 50px; background-color: rgba(255, 0, 0, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large; } # input[type='checkbox']{ width: 30px; height: 30px; line-height: 30px;}")),
+  tags$style(HTML(".bg-fsel { text-align: center; border-radius: 50px; background-color: rgba(255, 0, 0, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large;}")),
+  tags$style(HTML(".bg-m { text-align: center; border-radius: 50px; background-color: rgba(0, 0, 255, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-msel { text-align: center; border-radius: 50px; background-color: rgba(0, 0, 255, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-o { text-align: center; border-radius: 50px; background-color: rgba(10, 10, 10, 0.05); padding: 10px; color: black; font-weight: bolder; font-size: large}")),
+  tags$style(HTML(".bg-osel { text-align: center; border-radius: 50px; background-color: rgba(10, 10, 10, 0.6); padding: 10px; color: white; font-weight: bolder; font-size: large}")),
 
   tags$head(
     # Note the wrapping of the string in HTML()
@@ -100,15 +100,11 @@ ui <- fluidPage(
                       fluidRow(htmlOutput("nn_male")),
                       p(),
                       fluidRow(htmlOutput("nn_other"))
-
-
-
              ),
+
              tabPanel("review data",
                       span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
                       selectInput("session_for_review", label = "select session", choices = c("one", "or", "the", "other")),
-                      # selectInput("session_for_review", label = "select session", choices = select_for_revision()),
-
                       navlistPanel(widths = c(2, 10),
                                    tabPanel("focal (point samples)",
                                             rHandsontableOutput("rev_focal_table")),
@@ -118,10 +114,9 @@ ui <- fluidPage(
                                             rHandsontableOutput("rev_groom")),
                                    tabPanel("neighbors",
                                             rHandsontableOutput("rev_nn"))
-
                       )
-
              ),
+
              tabPanel("diagnostics",
                       h4("focal session overview:"),
                       tableOutput("filenames_used"),
@@ -189,8 +184,9 @@ server <- function(input, output, session) {
 
   # reviewing of existing data ---------------------------
   output$rev_focal_table <- renderRHandsontable({
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, ".csv"))) {
-      outtab <- read.csv(paste0("www/", input$session_for_review, ".csv"))
+    sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", sess, ".csv"))) {
+      outtab <- read.csv(paste0("www/", sess, ".csv"))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
       # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
@@ -199,7 +195,8 @@ server <- function(input, output, session) {
     }
   })
   output$rev_nn <- renderRHandsontable({
-    p <- paste0("www/", input$session_for_review, "-nn.csv")
+    sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
+    p <- paste0("www/", sess, "-nn.csv")
     if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(p)) {
       if (!isTRUE(readLines(p) == "")) {
         outtab <- read.csv(p)
@@ -214,9 +211,10 @@ server <- function(input, output, session) {
     }
   })
   output$rev_groom <- renderRHandsontable({
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-groom.csv"))) {
-      outtab <- read.csv(paste0("www/", input$session_for_review, "-groom.csv"))[-1, ]
-      print(head(outtab))
+    sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", sess, "-groom.csv"))) {
+      outtab <- read.csv(paste0("www/", sess, "-groom.csv"))[-1, ]
+      # print(head(outtab))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
       # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
@@ -225,9 +223,11 @@ server <- function(input, output, session) {
     }
   })
   output$rev_aggression <- renderRHandsontable({
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", input$session_for_review, "-aggr.csv"))) {
-      outtab <- read.csv(paste0("www/", input$session_for_review, "-aggr.csv"))[-1, ]
-      print(head(outtab))
+    sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
+    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(paste0("www/", sess, "-aggr.csv"))) {
+      outtab <- read.csv(paste0("www/", sess, "-aggr.csv"))
+      outtab <- outtab[-nrow(outtab), ]
+      # print(head(outtab))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
       # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
@@ -282,6 +282,8 @@ server <- function(input, output, session) {
     # reset for next scan:
     nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
     nn$firstrun <- TRUE
+
+    updateTabsetPanel(session, inputId = "nav_home", selected = "focal") # shift focus to home tab
   })
 
 
@@ -332,7 +334,7 @@ server <- function(input, output, session) {
 
   })
   observeEvent(input$record_focal_groom_change_btn, {
-    print(events_grooming$grooming_in_progress == TRUE)
+    # print(events_grooming$grooming_in_progress == TRUE)
     if (events_grooming$grooming_in_progress == TRUE & v$session_is_active == TRUE) showModal(focal_grooming_change_dialog(events_grooming = events_grooming))
   })
 
@@ -416,7 +418,7 @@ server <- function(input, output, session) {
     output$debugging_groom <- renderTable(events_grooming$grooming[-1, ])
   })
 
-  # other focal session EVENTS: -------------------
+  # other focal session aggression -------------------
   observeEvent(input$record_focal_aggr, {
     if (v$session_is_active) {
       showModal(focal_aggression_dialog(focal_id = v$focal_id)) # submit button in dialog: 'focal_aggression'
@@ -435,11 +437,11 @@ server <- function(input, output, session) {
   })
 
 
-
+  # start session ----------------------------
   observeEvent(input$start_focal_session_dialog_btn, {
     # check whether a session is already running
-    print(paste("session is active:", v$session_is_active, "\n"))
-    print(paste("foctab is NULL:", is.null(v$foc_tab), "\n"))
+    # print(paste("session is active:", v$session_is_active, "\n"))
+    # print(paste("foctab is NULL:", is.null(v$foc_tab), "\n"))
     if (v$session_is_active ) {
       showModal(modalDialog(
         span("Active session detected. You can't have two sessions at the same time. Save the running session first before starting a new one."),
@@ -454,7 +456,8 @@ server <- function(input, output, session) {
   observeEvent(input$focal_session_start, {
     # reset
     # events_grooming$grooming_in_progress <- FALSE
-    eft <- empty_foc_table(start_time = strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"), duration = input$focal_duration, id = input$focal_name, activity_codes = activity_codes)
+    eft <- empty_foc_table(start_time = strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"),
+                           duration = input$focal_duration, id = input$focal_name, activity_codes = activity_codes)
     v$foctab <- eft
     v$focal_id <- input$focal_name
     v$progress <- list(target = input$focal_duration, table_lines = input$focal_duration, na_vals = input$focal_duration, oos = 0, act = 0)
@@ -464,7 +467,7 @@ server <- function(input, output, session) {
     # v$filename <- file.path(tempdir(), paste0(s, ".csv"))
     v$filename <- file.path("www", paste0(s, ".csv"))
     write.table(v$foctab, file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    print(v$filename)
+    # print(v$filename)
     # update daily monitor
     daily_sessions$sessions_over_day <- rbind(NA, daily_sessions$sessions_over_day)
     daily_sessions$sessions_over_day[1, "session"] <- v$focal_session_identifier
@@ -477,12 +480,24 @@ server <- function(input, output, session) {
     })
     removeModal()
 
+    # reset grooming
+    events_grooming$grooming_in_progress = FALSE
+    events_grooming$grooming_direction = NA
+    events_grooming$current_grooming_parter = NA
+    events_grooming$withinsession_num = 1
+    events_grooming$withinevent_num = 1
+    events_grooming$grooming = empty_grooming()
+
+    # reset focal aggression
+    focal_aggression_data$aggression <- empty_focal_aggression_table()
+
+
     # set nn data
     # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     nn$ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
     nn$sex <- c(all_individuals$sex[all_individuals$group == input$group], rep("o", 24))
-
+    nn$final <- NULL
   })
 
   remcols <- c("time_stamp", "sample")
@@ -524,8 +539,6 @@ server <- function(input, output, session) {
       HTML(paste("activity samples:", v$progress$act, "<br>", "oos samples:", v$progress$oos, "<br>",
                  "NA samples:", v$progress$na_vals, "<br>", "target:", v$progress$target, "<br>", "num rows in table:", v$progress$table_lines))
     })
-
-
   })
   # progress tracker for session
   observeEvent(v$progress$act, {
@@ -550,7 +563,9 @@ server <- function(input, output, session) {
       # store aggression
       write.csv(focal_aggression_data$aggression, file = paste0("www/", v$focal_session_identifier, "-aggr.csv"), row.names = FALSE, quote = FALSE)
 
-
+      # update list for revisions
+      session_id_for_display <- paste0(daily_sessions$sessions_over_day[, "focal_id"], " (", as.character(daily_sessions$sessions_over_day[, "session"]), ")")
+      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
 
       # reset reactive values object
       v$foctab = NULL # the actual data table
@@ -560,10 +575,6 @@ server <- function(input, output, session) {
       v$session_is_active = FALSE
       v$progress <- NULL
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
-
-      # update list for revisions
-      updateSelectInput(inputId = "session_for_review", choices = as.character(daily_sessions$sessions_over_day[, "session"]))
-
     }
   })
 
@@ -596,10 +607,10 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$census_table, {
-    print(paste("presence is NULL:", is.null(xdata$presence), "\n"))
-    print(paste("day got started:", xdata$get_started, "\n"))
+    # print(paste("presence is NULL:", is.null(xdata$presence), "\n"))
+    # print(paste("day got started:", xdata$get_started, "\n"))
     xxx <- hot_to_r(input$census_table)
-    print(paste("nrow presence:", nrow(xxx), "\n"))
+    # print(paste("nrow presence:", nrow(xxx), "\n"))
     if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table)
       write.table(xxx, file = "www/census.csv", sep = ",", row.names = FALSE, quote = FALSE, dec = ".")

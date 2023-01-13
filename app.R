@@ -235,11 +235,11 @@ server <- function(input, output, session) {
       outtab
     }
   })
-  
-  
-  
-  
-  
+
+
+
+
+
 
   # nearest neighbors -------------------------
   observeEvent(input$nn_scan, {
@@ -535,23 +535,23 @@ server <- function(input, output, session) {
       output$focal_dur_progress <- NULL
     }
   })
-  
+
   # end session -------------------------
   observeEvent(input$finish_focal_session, {
     if (v$session_is_active) {
       temp_object <- v$foctab
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
+      # store focal table
       write.csv(temp_object, file = v$filename, row.names = FALSE, quote = FALSE)
-      system2(command = "open", shQuote(v$filename))
       # store nn object
       write.csv(nn$final, file = paste0("www/", v$focal_session_identifier, "-nn.csv"), row.names = FALSE, quote = FALSE)
       # store grooming
       write.csv(events_grooming$grooming, file = paste0("www/", v$focal_session_identifier, "-groom.csv"), row.names = FALSE, quote = FALSE)
       # store aggression
       write.csv(focal_aggression_data$aggression, file = paste0("www/", v$focal_session_identifier, "-aggr.csv"), row.names = FALSE, quote = FALSE)
-      
-      
-      
+
+
+
       # reset reactive values object
       v$foctab = NULL # the actual data table
       v$session_start = Sys.time()

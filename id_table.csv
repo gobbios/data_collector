@@ -1,12 +1,12 @@
 id,sex,group,is_focal
-pa,f,pb,yes
-pc,f,pb,yes
-pd,f,pb,yes
-pe,m,pb,yes
-pf,m,pb,yes
-pg,f,pb,yes
-ph,m,pb,no
-pi,f,pb,yes
+ap,f,pb,yes
+bp,f,pb,yes
+cp,f,pb,yes
+lm,m,pb,yes
+rm,m,pb,yes
+dp,f,pb,yes
+oneye,m,pb,no
+ep,f,pb,yes
 as,f,r1,yes
 bs,f,r1,yes
 cs,f,r1,yes
@@ -14,3 +14,5 @@ ds,f,r1,yes
 es,f,r1,yes
 fs,f,r1,no
 hs,f,r1,yes
+zj,m,r1,yes
+ij,m,r1,yes

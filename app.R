@@ -16,13 +16,28 @@ source("helpers/empty_grooming.R")
 source("helpers/focal_aggression_dialog.R")
 source("helpers/render_nn.R")
 source("helpers/empty_focal_aggression_table.R")
-
+source("helpers/additional_group_for_census.R")
 
 # individual table
 all_individuals <- read.csv("id_table.csv", stringsAsFactors = FALSE)
 all_individuals$present <- FALSE
-all_individuals$swelling <- factor(NA, levels = 1:3)
+all_individuals$swelling <- factor(NA, levels = c("", 0, 1, 2, 3))
 all_individuals$comment <- ""
+# add two new males for potential immigrants
+for (i in unique(all_individuals$group)) {
+  all_individuals <- rbind(NA, NA, all_individuals)
+  all_individuals$id[1:2] <- c("new male 1", "new male 2")
+  all_individuals$sex[1:2] <- "m"
+  all_individuals$group[1:2] <- i
+  all_individuals$is_focal[1:2] <- "no"
+  all_individuals$present[1:2] <- FALSE
+  all_individuals$swelling[1:2] <- NA
+  all_individuals$comment[1:2] <- ""
+}
+
+
+
+
 # list with observers (to be outsourced to csv file eventually)
 all_observers <- c("maria", "carel", "jeanne", "robert", "joan", "julia")
 # list with all activity codes for point sampling
@@ -89,7 +104,8 @@ ui <- fluidPage(
              ),
              tabPanel("census",
                       rHandsontableOutput("census_table"),
-                      actionButton("addnewrowtocensus", "add new row")
+                      actionButton("addnewrowtocensus", "add new row"),
+                      actionButton("addgrouptocensus", "additional group")
              ),
 
              tabPanel("nearest neighbors",
@@ -448,7 +464,7 @@ server <- function(input, output, session) {
         footer = tagList(modalButton("Cancel"))
       ))
     } else {
-      showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == input$group]))
+      showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == input$group & all_individuals$is_focal == "yes"]))
       updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
     }
   })
@@ -585,15 +601,15 @@ server <- function(input, output, session) {
   # start up message and setup -----------------------
   showModal(modalDialog(title = "hello there, what's up today?",
                         span("please provide the necessary information"), hr(),
-    dateInput("date", "date"),
-    selectInput("observer", "observer", choices = unique(sample(all_observers))),
-    # selectInput("group", "group", choices = c(all_individuals$group)),
-    selectInput("group", "group", choices = unique(all_individuals$group), selected = "pb"),
-    footer = tagList(
-      # modalButton("Cancel"),
-      actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
-      HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
-    )
+                        dateInput("date", "date"),
+                        selectInput("observer", "observer", choices = unique(sample(all_observers))),
+                        # selectInput("group", "group", choices = c(all_individuals$group)),
+                        selectInput("group", "group", choices = unique(all_individuals$group), selected = "pb"),
+                        footer = tagList(
+                          # modalButton("Cancel"),
+                          actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
+                          HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
+                        )
   ))
   observeEvent(input$startnewday_ok, {
     xdata$presence <- xdata$presence[xdata$presence$group == input$group, ] # select relevant group...
@@ -606,6 +622,17 @@ server <- function(input, output, session) {
     removeModal()
   })
 
+
+  # census related ---------------------
+  observeEvent(input$addgrouptocensus, {
+    showModal(additional_group_for_census(all_groups = unique(all_individuals$group), current_group = input$group))
+  })
+  observeEvent(input$add_group_selected_submit, {
+    if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
+      xdata$presence <- rbind(xdata$presence, all_individuals[all_individuals$group == input$add_group_selected, ])
+    }
+    removeModal()
+  })
   observeEvent(input$census_table, {
     # print(paste("presence is NULL:", is.null(xdata$presence), "\n"))
     # print(paste("day got started:", xdata$get_started, "\n"))
@@ -630,6 +657,10 @@ server <- function(input, output, session) {
   output$census_table <- renderRHandsontable({
     if (!is.null(xdata$presence) & xdata$get_started == TRUE) {
       xtab <- rhandsontable(xdata$presence, rowHeaders = NULL)
+      # make certain cells/columns read-only
+      xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
+      swell_col <- which(colnames(xdata$presence) == "swelling")
+      for (i in which(xdata$presence$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
       # xtab <- rhandsontable(xdata$presence[, -c(which(colnames(xdata$presence) %in% c("is_focal", "sex")))], rowHeaders = NULL)
       # xtab <- hot_row(xtab, c(1,3, 5), readOnly = TRUE)
       # xtab <- hot_col(xtab, c(1), readOnly = TRUE)

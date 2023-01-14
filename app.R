@@ -203,7 +203,7 @@ server <- function(input, output, session) {
   output$rev_focal_table <- renderRHandsontable({
     # print(file.path(daily_sessions$dirpath, paste0(sess, ".csv")))
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
-    fp <- file.path(fps$dirpath, paste0(sess, ".csv"))
+    fp <- file.path(fps$dirpath, paste0(sess, "_foctab.csv"))
     if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
       # outtab <- read.csv(paste0("www/", sess, ".csv"))
       outtab <- read.csv(fp)
@@ -218,7 +218,7 @@ server <- function(input, output, session) {
   output$rev_nn <- renderRHandsontable({
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
     # p <- paste0("www/", sess, "-nn.csv")
-    fp <- file.path(fps$dirpath, paste0(sess, "-nn.csv"))
+    fp <- file.path(fps$dirpath, paste0(sess, "_nn.csv"))
     if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
       if (!isTRUE(readLines(fp) == "")) {
         outtab <- read.csv(fp)
@@ -234,7 +234,7 @@ server <- function(input, output, session) {
   })
   output$rev_groom <- renderRHandsontable({
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
-    fp <- file.path(fps$dirpath, paste0(sess, "-groom.csv"))
+    fp <- file.path(fps$dirpath, paste0(sess, "_groom.csv"))
     if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
       outtab <- read.csv(fp)[-1, ]
       # print(head(outtab))
@@ -247,7 +247,7 @@ server <- function(input, output, session) {
   })
   output$rev_aggression <- renderRHandsontable({
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
-    fp <- file.path(fps$dirpath, paste0(sess, "-aggr.csv"))
+    fp <- file.path(fps$dirpath, paste0(sess, "_aggr.csv"))
     if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
       outtab <- read.csv(fp)
       outtab <- outtab[-nrow(outtab), ]
@@ -492,10 +492,10 @@ server <- function(input, output, session) {
     v$focal_session_identifier <- s
     # v$filename <- file.path(tempdir(), paste0(s, ".csv"))
     fps$current_foc_session_id <- s
-    fps$current_foc <- paste0(s, ".csv")
-    fps$current_foc_groom <- paste0(s, "-groom.csv")
-    fps$current_foc_aggr <- paste0(s, "-aggr.csv")
-    fps$current_foc_nn <- paste0(s, "-nn.csv")
+    fps$current_foc <- paste0(s, "_foctab.csv")
+    fps$current_foc_groom <- paste0(s, "_groom.csv")
+    fps$current_foc_aggr <- paste0(s, "_aggr.csv")
+    fps$current_foc_nn <- paste0(s, "_nn.csv")
     # write.table(v$foctab, file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
 

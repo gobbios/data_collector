@@ -3,11 +3,12 @@
 library(shiny)
 library(rhandsontable)
 
+source("helpers/empty_tables.R")
 
 source("helpers/empty_foc_table.R")
 source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
-source("helpers/adlib_aggression_dyadic_dialog.R")
+source("helpers/adlib_aggression_dyadic.R")
 source("helpers/empty_adlib_table.R")
 source("helpers/add_one_minute.R")
 source("helpers/focal_grooming_start_dialog.R")
@@ -135,7 +136,7 @@ ui <- fluidPage(
 
              tabPanel("diagnostics",
                       h4("focal session overview:"),
-                      tableOutput("filenames_used"),
+                      tableOutput("log"),
                       h4("links to the generated csv files (per focal session):"),
                       uiOutput("filenames_links"),
                       h4("current working directory"),
@@ -174,9 +175,10 @@ server <- function(input, output, session) {
                       session_is_active = FALSE,
                       progress = NULL)
   # monitor sessions across day
-  daily_sessions <- reactiveValues(sessions_over_day = matrix(ncol = 4, nrow = 0, dimnames = list(NULL,  c("session", "filename", "focal_id", "focal_counter"))))
+  sessions_log <- reactiveValues(log = empty_log(), so_far = 0)
   # file paths
-  fps <- reactiveValues(dirpath = NULL, daily_census = NULL, current_foc = NULL, current_foc_nn = NULL, current_foc_groom = NULL, current_foc_aggr = NULL)
+  fps <- reactiveValues(dirpath = NULL, daily_census = NULL, sessions_log = NULL, adlib_aggr = NULL,
+                        current_foc_session_id = NULL, current_foc_tab = NULL, current_foc_nn = NULL, current_foc_groom = NULL, current_foc_aggr = NULL)
 
   # adlib aggression data
   adlib_agg <- reactiveValues(dyadic = empty_adlib_table())
@@ -190,7 +192,7 @@ server <- function(input, output, session) {
   # focal session aggression
   focal_aggression_data <- reactiveValues(aggression = empty_focal_aggression_table())
   # nearest neighbors
-  nn <- reactiveValues(ini_state = NULL,# setNames(rep(FALSE, n), ids)
+  nn <- reactiveValues(ini_state = NULL, # ini_state = setNames(rep(FALSE, n), ids)
                        firstrun = TRUE,
                        sex = NULL,
                        ids = NULL,
@@ -201,10 +203,9 @@ server <- function(input, output, session) {
 
   # reviewing of existing data ---------------------------
   output$rev_focal_table <- renderRHandsontable({
-    # print(file.path(daily_sessions$dirpath, paste0(sess, ".csv")))
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
     fp <- file.path(fps$dirpath, paste0(sess, "_foctab.csv"))
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
+    if (sessions_log$so_far > 0 & file.exists(fp)) {
       # outtab <- read.csv(paste0("www/", sess, ".csv"))
       outtab <- read.csv(fp)
       print(fp)
@@ -219,7 +220,7 @@ server <- function(input, output, session) {
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
     # p <- paste0("www/", sess, "-nn.csv")
     fp <- file.path(fps$dirpath, paste0(sess, "_nn.csv"))
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
+    if (sessions_log$so_far > 0 & file.exists(fp)) {
       if (!isTRUE(readLines(fp) == "")) {
         outtab <- read.csv(fp)
         colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
@@ -235,7 +236,7 @@ server <- function(input, output, session) {
   output$rev_groom <- renderRHandsontable({
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
     fp <- file.path(fps$dirpath, paste0(sess, "_groom.csv"))
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
+    if (sessions_log$so_far > 0 & file.exists(fp)) {
       outtab <- read.csv(fp)[-1, ]
       # print(head(outtab))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
@@ -248,7 +249,7 @@ server <- function(input, output, session) {
   output$rev_aggression <- renderRHandsontable({
     sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
     fp <- file.path(fps$dirpath, paste0(sess, "_aggr.csv"))
-    if (nrow(daily_sessions$sessions_over_day) > 0 & file.exists(fp)) {
+    if (sessions_log$so_far > 0 & file.exists(fp)) {
       outtab <- read.csv(fp)
       outtab <- outtab[-nrow(outtab), ]
       # print(head(outtab))
@@ -391,6 +392,7 @@ server <- function(input, output, session) {
     if (events_grooming$grooming_direction == "mutual") {
       output$focal_grooming_in_progress <- renderText(c("grooming is in progress: ", v$focal_id, "and", events_grooming$current_grooming_parter, "groom each other"))
     }
+    write.csv(events_grooming$grooming, file = file.path(fps$dirpath, fps$current_foc_groom), row.names = FALSE, quote = FALSE)
   })
 
   observeEvent(input$change_grooming, {
@@ -419,6 +421,7 @@ server <- function(input, output, session) {
     if (events_grooming$grooming_direction == "mutual") {
       output$focal_grooming_in_progress <- renderText(c("grooming is in progress: ", v$focal_id, "and", events_grooming$current_grooming_parter, "groom each other"))
     }
+    write.csv(events_grooming$grooming, file = file.path(fps$dirpath, fps$current_foc_groom), row.names = FALSE, quote = FALSE)
   })
   observeEvent(input$stop_grooming, {
     events_grooming$grooming <- rbind(events_grooming$grooming, NA)
@@ -440,6 +443,7 @@ server <- function(input, output, session) {
     events_grooming$withinsession_num <- events_grooming$withinsession_num + 1
     events_grooming$withinevent_num <- 1
     output$debugging_groom <- renderTable(events_grooming$grooming[-1, ])
+    write.csv(events_grooming$grooming, file = file.path(fps$dirpath, fps$current_foc_groom), row.names = FALSE, quote = FALSE)
   })
 
   # other focal session aggression -------------------
@@ -456,6 +460,7 @@ server <- function(input, output, session) {
       focal_aggression_data$aggression$id2[1] <- input$focal_aggression_dyadic_id2
       focal_aggression_data$aggression$highest_intensity[1] <- input$focal_aggression_dyadic_intensity
       focal_aggression_data$aggression$focal_won[1] <- input$focal_aggression_dyadic_focal_won
+      write.csv(focal_aggression_data$aggression, file = file.path(fps$dirpath, fps$current_foc_aggr), row.names = FALSE, quote = FALSE)
       removeModal()
     }
   })
@@ -487,35 +492,33 @@ server <- function(input, output, session) {
     v$progress <- list(target = input$focal_duration, table_lines = input$focal_duration, na_vals = input$focal_duration, oos = 0, act = 0)
     v$session_is_active <- TRUE
 
-    s <- paste0(as.character(as.Date(input$date)), "_", input$observer, "_", v$focal_id)
-    s <- paste0(s, "_", sum(daily_sessions$sessions_over_day[, "focal_id"] == v$focal_id) + 1)
+    s <- paste0(as.character(as.Date(input$date)), "_", v$focal_id, "_", input$observer)
+    s <- paste0(s, "_", sum(sessions_log$log$focal_id == v$focal_id) + 1)
     v$focal_session_identifier <- s
-    # v$filename <- file.path(tempdir(), paste0(s, ".csv"))
     fps$current_foc_session_id <- s
-    fps$current_foc <- paste0(s, "_foctab.csv")
+    fps$current_foc_tab <- paste0(s, "_foctab.csv")
     fps$current_foc_groom <- paste0(s, "_groom.csv")
     fps$current_foc_aggr <- paste0(s, "_aggr.csv")
     fps$current_foc_nn <- paste0(s, "_nn.csv")
     # write.table(v$foctab, file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
-
-    # print(v$filename)
     # update daily monitor
-    daily_sessions$sessions_over_day <- rbind(NA, daily_sessions$sessions_over_day)
-    daily_sessions$sessions_over_day[1, "session"] <- fps$current_foc_session_id
-    daily_sessions$sessions_over_day[1, "filename"] <- file.path(fps$dirpath, fps$current_foc)
-    daily_sessions$sessions_over_day[1, "focal_id"] <- v$focal_id
-    daily_sessions$sessions_over_day[1, "focal_counter"] <- sum(daily_sessions$sessions_over_day[, "focal_id"] == v$focal_id)
+    sessions_log$so_far <- sessions_log$so_far + 1
+    sessions_log$log[sessions_log$so_far, ] <- NA
+    sessions_log$log$session[sessions_log$so_far] <- fps$current_foc_session_id
+    sessions_log$log$filename[sessions_log$so_far] <- file.path(fps$dirpath, fps$current_foc_tab)
+    sessions_log$log$focal_id[sessions_log$so_far] <- v$focal_id
+    sessions_log$log$focal_counter[sessions_log$so_far] <- sum(sessions_log$log$focal_id == v$focal_id)
+    print(sessions_log$log)
 
-    # fps$current_foc <- paste0(as.character(as.Date(input$date)), "_", input$observer, "_", v$focal_id, "_", daily_sessions$sessions_over_day[1, "focal_counter"], ".csv")
-    write.table(v$foctab, file = file.path(fps$dirpath, fps$current_foc), sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
+    write.table(v$foctab, file = file.path(fps$dirpath, fps$current_foc_tab), sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(sessions_log$log, file = fps$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
-    output$filenames_used <- renderTable({daily_sessions$sessions_over_day})
+    output$log <- renderTable({sessions_log$log})
     output$filenames_links <- renderText({
-      # sapply(daily_sessions$sessions_over_day[, "session", drop = TRUE], function(y) HTML(paste(a(y, href = paste0(y, ".csv")))))
-      sapply(seq_len(nrow(daily_sessions$sessions_over_day)), function(y) {
-        HTML(paste(a(daily_sessions$sessions_over_day[y, "session", drop = TRUE], href = gsub("www/", "", daily_sessions$sessions_over_day[y, "filename"]), target="_blank", rel="noopener noreferrer")))
+      sapply(seq_len(sessions_log$so_far), function(y) {
+        HTML(paste(a(sessions_log$log[y, "session", drop = TRUE], href = gsub("www/", "", sessions_log$log[y, "filename"]), target="_blank", rel="noopener noreferrer")))
       })
     })
     removeModal()
@@ -554,7 +557,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$focal_table, {
     xxx <- hot_to_r(input$focal_table)
-    write.table(xxx, file = file.path(fps$dirpath, fps$current_foc), sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(xxx, file = file.path(fps$dirpath, fps$current_foc_tab), sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
 
 
@@ -595,16 +598,19 @@ server <- function(input, output, session) {
       temp_object <- v$foctab
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
       # store focal table
-      write.csv(temp_object, file = file.path(fps$dirpath, fps$current_foc), row.names = FALSE, quote = FALSE)
+      write.csv(temp_object, file = file.path(fps$dirpath, fps$current_foc_tab), row.names = FALSE, quote = FALSE)
       # store nn object
       write.csv(nn$final, file = file.path(fps$dirpath, fps$current_foc_nn), row.names = FALSE, quote = FALSE)
       # store grooming
       write.csv(events_grooming$grooming, file = file.path(fps$dirpath, fps$current_foc_groom), row.names = FALSE, quote = FALSE)
       # store aggression
       write.csv(focal_aggression_data$aggression, file = file.path(fps$dirpath, fps$current_foc_aggr), row.names = FALSE, quote = FALSE)
+      # store focal log
+      write.table(sessions_log$log, file = fps$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+
 
       # update list for revisions
-      session_id_for_display <- paste0(daily_sessions$sessions_over_day[, "focal_id"], " (", daily_sessions$sessions_over_day[, "session"], ")")
+      session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session, ")")
       updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
 
       # reset reactive values object
@@ -616,11 +622,10 @@ server <- function(input, output, session) {
       v$progress <- NULL
 
       fps$current_foc_session_id <- NULL
-      fps$current_foc <- NULL
+      fps$current_foc_tab <- NULL
       fps$current_foc_nn <- NULL
       fps$current_foc_groom <- NULL
       fps$current_foc_aggr <- NULL
-
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
     }
   })
@@ -655,7 +660,9 @@ server <- function(input, output, session) {
     if (!dir.exists("www")) dir.create("www")
     fps$dirpath <- file.path("www", paste0(as.character(input$date), "_", as.character(input$observer)))
     if (!dir.exists(fps$dirpath)) dir.create(fps$dirpath)
-    fps$daily_census <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_", as.character(input$observer), "_", "census.csv"))
+    fps$daily_census <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_global_", as.character(input$observer), "_0_census.csv"))
+    fps$adlib_aggr <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_global_", as.character(input$observer), "_0_aggr.csv"))
+    fps$sessions_log <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_global_", as.character(input$observer), "_0_log.csv"))
   })
 
 
@@ -709,11 +716,8 @@ server <- function(input, output, session) {
     showModal(adlib_aggression_dyadic_dialog()) # submit button in dialog: 'adlib_aggression'
   })
   observeEvent(input$adlib_aggression, {
-    adlib_agg$dyadic <- rbind(NA, adlib_agg$dyadic)
-    adlib_agg$dyadic$time_stamp[1] <- input$adlib_aggression_dyadic_datetime
-    adlib_agg$dyadic$id1[1] <- input$adlib_aggression_dyadic_id1
-    adlib_agg$dyadic$id2[1] <- input$adlib_aggression_dyadic_id2
-    adlib_agg$dyadic$highest_intensity[1] <- input$adlib_aggression_dyadic_intensity
+    adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input)
+    write.csv(adlib_agg$dyadic, file = fps$adlib_aggr, quote = FALSE, row.names = FALSE)
     removeModal()
   })
 

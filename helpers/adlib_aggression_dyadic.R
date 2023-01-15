@@ -10,3 +10,14 @@ adlib_aggression_dyadic_dialog <- function() {
               )
   )
 }
+
+# default for reactive data is adlib_agg$dyadic
+adlib_aggression_dyadic_update <- function(reactive_xdata, input_list) {
+  reactive_xdata <- rbind(NA, reactive_xdata)
+  reactive_xdata$time_stamp[1] <- input_list$adlib_aggression_dyadic_datetime
+  reactive_xdata$id1[1] <- input_list$adlib_aggression_dyadic_id1
+  reactive_xdata$id2[1] <- input_list$adlib_aggression_dyadic_id2
+  reactive_xdata$highest_intensity[1] <- input_list$adlib_aggression_dyadic_intensity
+
+  reactive_xdata
+}

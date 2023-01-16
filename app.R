@@ -197,6 +197,7 @@ server <- function(input, output, session) {
                        sex = NULL,
                        ids = NULL,
                        final = NULL)
+  individuals <- reactiveValues(for_nn = NULL)
 
 
 
@@ -636,11 +637,13 @@ server <- function(input, output, session) {
 
   # start up message and setup -----------------------
   showModal(modalDialog(title = "hello there, what's up today?",
-                        span("please provide the necessary information"), hr(),
+                        span("please provide the necessary information"), 
+                        hr(),
                         dateInput("date", "date"),
                         selectInput("observer", "observer", choices = unique(sample(all_observers))),
                         # selectInput("group", "group", choices = c(all_individuals$group)),
                         selectInput("group", "group", choices = unique(all_individuals$group), selected = "pb"),
+                        checkboxInput("desktopdir", "use 'Desktop/data_collector_data' as data directory", value = FALSE),
                         footer = tagList(
                           # modalButton("Cancel"),
                           actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
@@ -648,6 +651,19 @@ server <- function(input, output, session) {
                         )
   ))
   observeEvent(input$startnewday_ok, {
+    # check whether data directory is there, and if not and required, create it
+    fps$data_root_dir <- "www"
+    if (input$desktopdir) {
+      fp <- normalizePath(file.path("~/Desktop/data_collector_data"), mustWork = FALSE)
+      if (!dir.exists(fp)) {
+        dir.create(fp)
+        showModal(modalDialog("created directory on Desktop: 'data_collector_data'"))
+        Sys.sleep(5)
+      }
+      fps$data_root_dir <- fp
+    }
+    
+    individuals$for_nn <- xdata$presence[xdata$presence$group == input$group, ]
     xdata$presence <- xdata$presence[xdata$presence$group == input$group, ] # select relevant group...
     xdata$get_started <- TRUE
     output$dategroupobs <- renderText({
@@ -658,7 +674,8 @@ server <- function(input, output, session) {
     removeModal()
     # create folder for file storage and names for per-day files
     if (!dir.exists("www")) dir.create("www")
-    fps$dirpath <- file.path("www", paste0(as.character(input$date), "_", as.character(input$observer)))
+    # fps$dirpath <- file.path("www", paste0(as.character(input$date), "_", as.character(input$observer)))
+    fps$dirpath <- normalizePath(file.path(fps$data_root_dir, paste0(as.character(input$date), "_", as.character(input$observer))), mustWork = FALSE)
     if (!dir.exists(fps$dirpath)) dir.create(fps$dirpath)
     fps$daily_census <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_global_", as.character(input$observer), "_0_census.csv"))
     fps$adlib_aggr <- file.path(fps$dirpath, paste0(as.character(as.Date(input$date)), "_global_", as.character(input$observer), "_0_aggr.csv"))

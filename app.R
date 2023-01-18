@@ -182,14 +182,16 @@ server <- function(input, output, session) {
   outputOptions(output, "panelStatus", suspendWhenHidden = FALSE)
 
   observeEvent(input$test_stuff, {
-    print(isolate(reactiveValuesToList(fps)))
+    print(unlist(isolate(reactiveValuesToList(v))$progress))
+    print(unlist(isolate(reactiveValuesToList(metadata))))
+    # print(isolate(reactiveValuesToList(fps)))
     # print(isolate(reactiveValuesToList(paths_sessions)))
-    print(paths_sessions$current_foc_tab)
   })
 
   # metadata (info regarding day): list with names
   # once per day: group date observer focal_sessions_so_far focal_duration
   # per focal session: focal_start focal_name get_started session_is_active current_foc_session_id
+  # progress tracker within a session:
   metadata <- empty_metadata()
 
   # xdata: for daily info (group, observer, date)
@@ -244,8 +246,8 @@ server <- function(input, output, session) {
     sessions_log$log <<- ss$sessions_log
     metadata$focal_sessions_so_far <<- nrow(ss$sessions_log)
     paths_day$dirpath <- ss$dirpath
-    print(sessions_log$log)
-    print(paths_day$dirpath)
+    # print(sessions_log$log)
+    # print(paths_day$dirpath)
 
     # metadata$date <- "2000-04-04"
     #
@@ -491,7 +493,12 @@ server <- function(input, output, session) {
 
     eft <- empty_foc_table(start_time = metadata$focal_start, duration = metadata$focal_duration, id = metadata$focal_id, activity_codes = activity_codes)
     v$foctab <- eft
-    v$progress <- list(target = metadata$focal_duration, table_lines = metadata$focal_duration, na_vals = metadata$focal_duration, oos = 0, act = 0)
+
+    metadata$progr_target = as.numeric(metadata$focal_duration)
+    metadata$progr_table_lines = as.numeric(metadata$focal_duration)
+    metadata$progr_na_vals = as.numeric(metadata$focal_duration)
+    metadata$progr_oos = 0
+    metadata$progr_act = 0
     metadata$session_is_active <- TRUE
 
     # update paths for per-session files
@@ -570,33 +577,28 @@ server <- function(input, output, session) {
     # update progress tracker
     # add rows if required
     # automated better than manually via addrow-button
-    v$progress$oos <- sum(xxx$activity %in% "oos")
-    v$progress$act <- sum(xxx$activity %in% activity_codes) - v$progress$oos
-    v$progress$na_vals <- sum(is.na(xxx$activity))
-    v$progress$table_lines <- nrow(xxx)
-    if (v$progress$act < v$progress$target & !is.na(xxx$activity[nrow(xxx)])) {
+    metadata$progr_oos = sum(xxx$activity %in% "oos")
+    metadata$progr_act = sum(xxx$activity %in% activity_codes) - metadata$progr_oos
+    metadata$progr_table_lines = nrow(xxx)
+    metadata$progr_na_vals = sum(is.na(xxx$activity))
+
+    if (metadata$progr_act < metadata$progr_target & !is.na(xxx$activity[nrow(xxx)])) {
       xxx <- rbind(xxx, empty_foc_table(start_time = Sys.time(), duration = 1, id = metadata$focal_id, activity_codes = activity_codes))
       xxx$sample[nrow(xxx)] <- nrow(xxx)
       xxx$time_for_display[nrow(xxx)] <- add_one_minute(xxx$time_for_display[nrow(xxx) - 1])
-      v$progress$table_lines <- nrow(xxx) + 1
+      metadata$progr_table_lines <- nrow(xxx) + 1
       Sys.sleep(1)
     }
 
     # browser()
     v$foctab <- xxx
     output$debug_foctab_progress <- renderUI({
-      HTML(paste("activity samples:", v$progress$act, "<br>", "oos samples:", v$progress$oos, "<br>",
-                 "NA samples:", v$progress$na_vals, "<br>", "target:", v$progress$target, "<br>", "num rows in table:", v$progress$table_lines))
+      HTML(paste("activity samples:", metadata$progr_act, "<br>", "oos samples:", metadata$progr_oos, "<br>",
+                 "NA samples:", metadata$progr_na_vals, "<br>", "target:", metadata$progr_target, "<br>", "num rows in table:", metadata$progr_table_lines))
     })
   })
   # progress tracker for session
-  observeEvent(v$progress$act, {
-    if (v$progress$act > 0) {
-      output$focal_dur_progress <- renderText(paste(v$progress$act, "of", metadata$focal_duration, "done"))
-    } else {
-      output$focal_dur_progress <- NULL
-    }
-  })
+  observeEvent(metadata$progr_act, {output$focal_dur_progress <- renderText(paste(metadata$progr_act, "of", metadata$focal_duration, "done"))})
 
   # end session -------------------------
   observeEvent(input$finish_focal_session, {
@@ -625,7 +627,13 @@ server <- function(input, output, session) {
       metadata$focal_id <- NA
       metadata$current_foc_session_id = NA
       metadata$session_is_active = FALSE
-      v$progress <- NULL
+      metadata$progr_target = as.numeric(metadata$focal_duration)
+      metadata$progr_table_lines = as.numeric(metadata$focal_duration)
+      metadata$progr_na_vals = as.numeric(metadata$focal_duration)
+      metadata$progr_oos = 0
+      metadata$progr_act = 0
+
+
 
       metadata$current_foc_session_id <- NA
       paths_sessions$current_foc_tab <- NA

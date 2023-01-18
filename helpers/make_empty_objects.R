@@ -19,8 +19,14 @@ empty_metadata <- function() {
                  focal_start = NA, focal_duration = NA, focal_id = NA,
                  get_started = FALSE,
                  session_is_active = FALSE,
-                 current_foc_session_id = NA
+                 current_foc_session_id = NA,
+                 progr_target = NA,
+                 progr_table_lines = NA,
+                 progr_na_vals = NA,
+                 progr_oos = NA,
+                 progr_act = NA
 
                  )
   # metadata$focal_sessions_so_far
 }
+

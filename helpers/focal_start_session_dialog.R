@@ -11,7 +11,7 @@ focal_start_session_dialog <- function(potential_focals = NULL) {
     numericInput('focal_duration', 'focal duration', value = 6, min = 2, max = 10, step = 2),
 
     footer = tagList(
-      actionButton("focal_session_start", "START", icon = icon("rocket"), style = "background: rgba(0, 255, 0, 0.5); height:100px"),
+      actionButton("focal_session_start_abtn", "START", icon = icon("rocket"), style = "background: rgba(0, 255, 0, 0.5); height:100px"),
       modalButton("Cancel", icon = icon("ban"))
     )
   )

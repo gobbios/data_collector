@@ -1,7 +1,7 @@
 # functions to generate empty tables and objects
 
-# target: daily_sessions$sessions_over_day
 # tracks focal sessions within a day
+# reactive target: daily_sessions$sessions_over_day
 empty_log <- function() {
   data.frame(session_id = character(0),
              session_created = character(0),
@@ -12,6 +12,7 @@ empty_log <- function() {
 }
 
 # metadata to recover/reload days
+# reactive target: 'metadata'
 empty_metadata <- function() {
   reactiveValues(date = NULL,
                  observer = NULL,
@@ -30,5 +31,18 @@ empty_metadata <- function() {
 
                  )
   # metadata$focal_sessions_so_far
+}
+
+# adlib aggression
+# reactive target: 'adlib_agg$dyadic'
+empty_adlib_aggr <- function() {
+  # for dyadic aggression
+
+  # columns needed:
+  # date/time
+  # id1
+  # id2
+  # intensity
+  data.frame("time_stamp" = character(0), "id1" = character(0), "id2" = character(0), "highest_intensity" = character(0))
 }
 

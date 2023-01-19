@@ -13,7 +13,6 @@ source("helpers/reload_sessions.R")
 source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
 source("helpers/adlib_aggression_dyadic.R")
-source("helpers/empty_adlib_table.R")
 source("helpers/add_one_minute.R")
 source("helpers/focal_grooming_start_dialog.R")
 source("helpers/focal_grooming_change_dialog.R")
@@ -208,7 +207,7 @@ server <- function(input, output, session) {
   paths_sessions <- reactiveValues(current_foc_tab = NULL, current_foc_nn = NULL, current_foc_groom = NULL, current_foc_aggr = NULL)
 
   # adlib aggression data
-  adlib_agg <- reactiveValues(dyadic = empty_adlib_table())
+  adlib_agg <- reactiveValues(dyadic = empty_adlib_aggr())
   # focal session grooming
   events_grooming <- reactiveValues(grooming_in_progress = FALSE,
                                     grooming_direction = NA,

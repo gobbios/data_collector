@@ -53,7 +53,7 @@ review_table_aggr <- function(input, paths_day, metadata) {
   fp <- file.path(paths_day$dirpath, paste0(sess, "_aggr.csv"))
   if (metadata$focal_sessions_so_far > 0 & file.exists(fp)) {
     outtab <- read.csv(fp)
-    outtab <- outtab[-nrow(outtab), ]
+    # outtab <- outtab[-nrow(outtab), ]
     # print(head(outtab))
     outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
     # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)

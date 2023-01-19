@@ -7,6 +7,8 @@ source("helpers/make_empty_objects.R")
 source("helpers/html_styles.R")
 source("helpers/review_tables.R")
 source("helpers/startup_dialog_box.R")
+source("helpers/link_directory.R")
+source("helpers/focal_aggression.R")
 
 source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
@@ -17,9 +19,7 @@ source("helpers/add_one_minute.R")
 source("helpers/focal_grooming_start_dialog.R")
 source("helpers/focal_grooming_change_dialog.R")
 source("helpers/empty_grooming.R")
-source("helpers/focal_aggression_dialog.R")
 source("helpers/render_nn.R")
-source("helpers/empty_focal_aggression_table.R")
 source("helpers/additional_group_for_census.R")
 
 # individual table
@@ -216,7 +216,7 @@ server <- function(input, output, session) {
                                     withinevent_num = 1,
                                     grooming = empty_grooming())
   # focal session aggression
-  focal_aggression_data <- reactiveValues(aggression = empty_focal_aggression_table())
+  focal_aggression_data <- reactiveValues(aggression = empty_focal_aggr())
   # nearest neighbors
   nn <- reactiveValues(ini_state = NULL, # ini_state = setNames(rep(FALSE, n), ids)
                        firstrun = TRUE,
@@ -453,17 +453,21 @@ server <- function(input, output, session) {
       showModal(focal_aggression_dialog(focal_id = metadata$focal_id)) # submit button in dialog: 'focal_aggression'
     }
   })
-  observeEvent(input$focal_aggression, {
-    if (metadata$session_is_active) {
-      focal_aggression_data$aggression <- rbind(NA, focal_aggression_data$aggression)
-      focal_aggression_data$aggression$time_stamp[1] <- input$focal_aggression_dyadic_datetime
-      focal_aggression_data$aggression$focal[1] <- input$focal_aggression_dyadic_id1
-      focal_aggression_data$aggression$id2[1] <- input$focal_aggression_dyadic_id2
-      focal_aggression_data$aggression$highest_intensity[1] <- input$focal_aggression_dyadic_intensity
-      focal_aggression_data$aggression$focal_won[1] <- input$focal_aggression_dyadic_focal_won
-      write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
-      removeModal()
-    }
+  observeEvent(input$focal_aggression_abtn, {
+    focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, input_list = input)
+    write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
+    removeModal()
+
+    # if (metadata$session_is_active) {
+    #   focal_aggression_data$aggression <- rbind(NA, focal_aggression_data$aggression)
+    #   focal_aggression_data$aggression$time_stamp[1] <- input$focal_aggression_dyadic_datetime
+    #   focal_aggression_data$aggression$focal[1] <- input$focal_aggression_dyadic_id1
+    #   focal_aggression_data$aggression$id2[1] <- input$focal_aggression_dyadic_id2
+    #   focal_aggression_data$aggression$highest_intensity[1] <- input$focal_aggression_dyadic_intensity
+    #   focal_aggression_data$aggression$focal_won[1] <- input$focal_aggression_dyadic_focal_won
+    #   write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
+    #   removeModal()
+    # }
   })
 
 
@@ -536,7 +540,7 @@ server <- function(input, output, session) {
     events_grooming$grooming = empty_grooming()
 
     # reset focal aggression
-    focal_aggression_data$aggression <- empty_focal_aggression_table()
+    focal_aggression_data$aggression <- empty_focal_aggr()
 
 
     # set nn data
@@ -568,9 +572,7 @@ server <- function(input, output, session) {
     output$static_foctab <- renderTable(xxx)
 
 
-    # update progress tracker
-    # add rows if required
-    # automated better than manually via addrow-button
+    # update progress tracker and add rows to focal table if required (automated better than manually via addrow-button)
     metadata$progr_oos = sum(xxx$activity %in% "oos")
     metadata$progr_act = sum(xxx$activity %in% activity_codes) - metadata$progr_oos
     metadata$progr_table_lines = nrow(xxx)

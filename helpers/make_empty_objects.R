@@ -46,3 +46,14 @@ empty_adlib_aggr <- function() {
   data.frame("time_stamp" = character(0), "id1" = character(0), "id2" = character(0), "highest_intensity" = character(0))
 }
 
+# focal aggression
+empty_focal_aggr <- function() {
+  # for dyadic aggression
+
+  # columns needed:
+  # date/time
+  # id1
+  # id2
+  # intensity
+  data.frame("time_stamp" = character(0), "focal" = character(0), "id2" = character(0), "highest_intensity" = character(0), "focal_won" = logical(0))
+}

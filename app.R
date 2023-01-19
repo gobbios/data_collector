@@ -72,7 +72,8 @@ ui <- fluidPage(
   navbarPage("give me data collada", id = "nav_home",
              tabPanel("home",
                       column(2, "",
-                             htmlOutput("dategroupobs")
+                             htmlOutput("dategroupobs"),
+                             actionButton("open_data_dir_abtn", "open data directory")
                       ),
                       column(10, "",
                              # HTML('<p style= "color: red">bla</p>'),
@@ -141,8 +142,6 @@ ui <- fluidPage(
                       verbatimTextOutput("info_paths_day"),
                       h4("focal session overview:"),
                       tableOutput("log"),
-                      h4("links to the generated csv files (per focal session):"),
-                      uiOutput("filenames_links"),
                       h4("current working directory"),
                       verbatimTextOutput("current_wd"),
                       h4("current content of meta data"),
@@ -201,7 +200,7 @@ server <- function(input, output, session) {
   v <- reactiveValues(foctab = NULL, # the actual data table
                       session_start = Sys.time())
   # monitor sessions across day
-  sessions_log <- reactiveValues(log = empty_log(), so_far = 0)
+  sessions_log <- reactiveValues(log = empty_log())
   # file paths
   # fixed throughout the day (logs, census etc)
   paths_day <- reactiveValues(data_root_dir = NULL, dirpath = NULL, daily_census = NULL, sessions_log = NULL, adlib_aggr = NULL, day_meta = NULL)
@@ -514,10 +513,11 @@ server <- function(input, output, session) {
     # update daily monitor
     metadata$focal_sessions_so_far <- as.numeric(metadata$focal_sessions_so_far) + 1
     sessions_log$log[metadata$focal_sessions_so_far, ] <- NA
-    sessions_log$log$session[metadata$focal_sessions_so_far] <- metadata$current_foc_session_id
+    sessions_log$log$session_id[metadata$focal_sessions_so_far] <- metadata$current_foc_session_id
     sessions_log$log$filename[metadata$focal_sessions_so_far] <- paths_sessions$current_foc_tab
     sessions_log$log$focal_id[metadata$focal_sessions_so_far] <- metadata$focal_id
     sessions_log$log$focal_counter[metadata$focal_sessions_so_far] <- sum(sessions_log$log$focal_id == metadata$focal_id)
+    sessions_log$log$session_created[metadata$focal_sessions_so_far] <- as.character(Sys.time())
     print(sessions_log$log)
 
 
@@ -526,11 +526,6 @@ server <- function(input, output, session) {
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = paths_day$day_meta, row.names = TRUE, quote = FALSE)
 
     output$log <- renderTable({sessions_log$log})
-    output$filenames_links <- renderText({
-      sapply(seq_len(metadata$focal_sessions_so_far), function(y) {
-        HTML(paste(a(sessions_log$log[y, "session", drop = TRUE], href = gsub("www/", "", sessions_log$log[y, "filename"]), target="_blank", rel="noopener noreferrer")))
-      })
-    })
     removeModal()
 
     # reset grooming
@@ -618,12 +613,11 @@ server <- function(input, output, session) {
 
 
       # update list for revisions
-      session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session, ")")
+      session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
       updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
 
       # reset reactive values object
       v$foctab = NULL # the actual data table
-      v$session_start = Sys.time()
       metadata$focal_id <- NA
       metadata$current_foc_session_id = NA
       metadata$session_is_active = FALSE
@@ -659,17 +653,6 @@ server <- function(input, output, session) {
 
     # check whether data directory is there, and if not and required, create it
     paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
-    # if (input$desktopdir) {
-    #   paths_day$data_root_dir <- normalizePath("~/Desktop/data_collector_data", mustWork = FALSE)
-    # } else {
-    #   paths_day$data_root_dir <- normalizePath("www", mustWork = FALSE)
-    #   if (!dir.exists(paths_day$data_root_dir)) dir.create(paths_day$data_root_dir)
-    # }
-    # if (!dir.exists(paths_day$data_root_dir) & input$desktopdir) {
-    #   dir.create(paths_day$data_root_dir)
-    #   showModal(modalDialog("created directory on Desktop: 'data_collector_data'"))
-    #   Sys.sleep(5)
-    # }
     paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
     if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
     # path names to daily data files
@@ -760,7 +743,9 @@ server <- function(input, output, session) {
   output$rsession_info <- renderPrint(sessionInfo())
   output$current_wd <- renderPrint(getwd())
 
-
+  observeEvent(input$open_data_dir_abtn, {
+    if (dir.exists(paths_day$data_root_dir)) system2("open", args = shQuote(paths_day$data_root_dir))
+  })
 }
 
 # Run the application

@@ -1,8 +1,8 @@
-focal_grooming_change_dialog <- function(events_grooming) {
+focal_grooming_change_dialog <- function(metadata) {
   modalDialog("enter grooming information",
               column(width = 6,
                      radioButtons("grooming_focal_direction_change", "focal gives or receives?", choices = c("gives", "receives", "mutual"),
-                                  selected = events_grooming$grooming_direction),
+                                  selected = metadata$grooming_direction),
                      actionButton("change_grooming", "roles changed")
               ),
               column(width = 6,

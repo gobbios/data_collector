@@ -43,7 +43,7 @@ reload_day_prep <- function(day_folder, basefolder = "www") {
 # fps$current_foc_aggr <- file.path(fps$dirpath, paste0(session_id, "_aggr.csv"))
 # fps$current_foc_session_id <- session_id
 
-# folder <- "/Users/christofneumann/Desktop/data_collector_data/2023-01-16_jeanne"
+# folder <- "~/Desktop/data_collector_data/2023-01-16_jeanne"
 reload_all_focal_sessions <- function(folder) {
   xpaths <- list.files(folder, full.names = TRUE, pattern = "foctab.csv$")
   out <- lapply(xpaths, function(x) {
@@ -53,7 +53,7 @@ reload_all_focal_sessions <- function(folder) {
   do.call("rbind", out)
 }
 
-# folder <- "/Users/christofneumann/Desktop/data_collector_data/2023-01-16_jeanne"
+# folder <- "www/2023-01-19_jeanne"
 read_meta <- function(folder) {
   xpaths <- list.files(folder, full.names = TRUE, pattern = "meta.csv$")
   x <- read.csv(xpaths, row.names = 1)
@@ -63,7 +63,12 @@ read_meta <- function(folder) {
               focal_sessions_so_far = as.numeric(x["focal_sessions_so_far", 1]),
               focal_duration = as.numeric(x["focal_duration", 1]),
               focal_start = as.character(x["focal_start", 1]),
-              focal_name = x["focal_name", 1])
+              focal_id = x["focal_id", 1],
+              get_started = as.logical(x["get_started", 1]),
+              session_is_active = as.logical(x["session_is_active", 1])
+              )
+  # checking
+  # y <- names(isolate(reactiveValuesToList(empty_metadata())))
   out
 }
 

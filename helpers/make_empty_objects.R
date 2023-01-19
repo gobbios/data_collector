@@ -22,16 +22,25 @@ empty_metadata <- function() {
                  get_started = FALSE,
                  session_is_active = FALSE,
                  current_foc_session_id = NA,
-                 # progress within the current session
+                 # progress within the current focal session
                  progr_target = NA,
                  progr_table_lines = NA,
                  progr_na_vals = NA,
                  progr_oos = NA,
-                 progr_act = NA
-
+                 progr_act = NA,
+                 # grooming monitor
+                 grooming_in_progress = FALSE,
+                 grooming_direction = NA,
+                 grooming_current_parter = NA,
+                 grooming_withinsession_num = 1,
+                 grooming_withinevent_num = 1
                  )
   # metadata$focal_sessions_so_far
 }
+
+
+
+
 
 # adlib aggression
 # reactive target: 'adlib_agg$dyadic'

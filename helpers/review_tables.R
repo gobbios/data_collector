@@ -37,7 +37,7 @@ review_table_groom <- function(input, paths_day, metadata) {
   sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
   fp <- file.path(paths_day$dirpath, paste0(sess, "_groom.csv"))
   if (metadata$focal_sessions_so_far > 0 & file.exists(fp)) {
-    outtab <- read.csv(fp)[-1, ]
+    outtab <- read.csv(fp)
     # print(head(outtab))
     outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
     # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)

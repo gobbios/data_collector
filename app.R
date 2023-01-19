@@ -19,7 +19,6 @@ source("helpers/adlib_aggression_dyadic.R")
 source("helpers/add_one_minute.R")
 source("helpers/focal_grooming_start_dialog.R")
 source("helpers/focal_grooming_change_dialog.R")
-source("helpers/empty_grooming.R")
 source("helpers/render_nn.R")
 source("helpers/additional_group_for_census.R")
 
@@ -191,15 +190,15 @@ server <- function(input, output, session) {
   # metadata (info regarding day): list with names
   # once per day: group date observer focal_sessions_so_far focal_duration
   # per focal session: focal_start focal_name get_started session_is_active current_foc_session_id
-  # progress tracker within a session:
-  # progress tracker for grooming:
+  # progress tracker within a focal session:
+  # tracker for grooming:
   metadata <- empty_metadata()
 
   # xdata: for daily info (group, observer, date)
   xdata <- reactiveValues(presence = all_individuals)
   # v: for a single focal session
-  v <- reactiveValues(foctab = NULL, # the actual data table
-                      session_start = Sys.time())
+  v <- reactiveValues(foctab = NULL) # the actual data table
+
   # monitor sessions across day
   sessions_log <- reactiveValues(log = empty_log())
   # file paths
@@ -361,24 +360,13 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$start_grooming, {
+    metadata$grooming_in_progress <- TRUE
     metadata$grooming_direction <- input$grooming_focal_direction
     metadata$grooming_current_parter <- input$grooming_partner_name
-    grooming$grooming <- rbind(grooming$grooming, NA)
-    grooming$grooming$withinevent_num[nrow(grooming$grooming)] <- metadata$grooming_withinevent_num
-    grooming$grooming$time_stamp[nrow(grooming$grooming)] <- Sys.time()
-    grooming$grooming$session[nrow(grooming$grooming)] <- metadata$current_foc_session_id
-    grooming$grooming$focal[nrow(grooming$grooming)] <- metadata$focal_id
-    grooming$grooming$partner[nrow(grooming$grooming)] <- metadata$grooming_current_parter
-    grooming$grooming$withinsession_num[nrow(grooming$grooming)] <- metadata$grooming_withinsession_num
-    grooming$grooming$direction[nrow(grooming$grooming)] <- metadata$grooming_direction
-    grooming$grooming$approach_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_approach
-    grooming$grooming$initated_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_init
-
-    metadata$grooming_in_progress <- TRUE
+    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "start", input_list = input, metadata_list = metadata)
     removeModal()
     output$debugging_groom <- renderTable(grooming$grooming[-1, ])
     metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num  + 1
-
 
     # progress update
     output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
@@ -390,49 +378,27 @@ server <- function(input, output, session) {
 
   observeEvent(input$change_grooming, {
     metadata$grooming_direction <- input$grooming_focal_direction_change
-    grooming$grooming <- rbind(grooming$grooming, NA)
-    grooming$grooming$withinevent_num[nrow(grooming$grooming)] <- metadata$grooming_withinevent_num
-    grooming$grooming$time_stamp[nrow(grooming$grooming)] <- Sys.time()
-    grooming$grooming$session[nrow(grooming$grooming)] <- metadata$current_foc_session_id
-    grooming$grooming$focal[nrow(grooming$grooming)] <- metadata$focal_id
-    grooming$grooming$partner[nrow(grooming$grooming)] <- metadata$grooming_current_parter
-    grooming$grooming$withinsession_num[nrow(grooming$grooming)] <- metadata$grooming_withinsession_num
-    grooming$grooming$direction[nrow(grooming$grooming)] <- metadata$grooming_direction
-    grooming$grooming$approach_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_approach
-    grooming$grooming$initated_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_init
-
+    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "change", input_list = input, metadata_list = metadata)
     removeModal()
     metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num + 1
     output$debugging_groom <- renderTable(grooming$grooming[-1, ])
 
-    # progress update
+    # progress update and csv writing
     output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
                                                                              focal_id = metadata$focal_id,
                                                                              current_grooming_parter = metadata$grooming_current_parter))
-
-
     write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
   })
-  observeEvent(input$stop_grooming, {
-    grooming$grooming <- rbind(grooming$grooming, NA)
-    grooming$grooming$withinevent_num[nrow(grooming$grooming)] <- metadata$grooming_withinevent_num
-    grooming$grooming$time_stamp[nrow(grooming$grooming)] <- Sys.time()
-    grooming$grooming$session[nrow(grooming$grooming)] <- metadata$current_foc_session_id
-    grooming$grooming$focal[nrow(grooming$grooming)] <- metadata$focal_id
-    grooming$grooming$partner[nrow(grooming$grooming)] <- metadata$grooming_current_parter
-    grooming$grooming$withinsession_num[nrow(grooming$grooming)] <- metadata$grooming_withinsession_num
-    grooming$grooming$direction[nrow(grooming$grooming)] <- "end"
-    grooming$grooming$approach_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_approach
-    grooming$grooming$initated_by_focal[nrow(grooming$grooming)] <- input$grooming_focal_init
-    grooming$grooming$leave_by[grooming$grooming$withinsession_num == metadata$grooming_withinsession_num] <- input$grooming_focal_leave
 
+  observeEvent(input$stop_grooming, {
+    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "end", input_list = input, metadata_list = metadata)
     removeModal()
     metadata$grooming_in_progress <- FALSE
     metadata$grooming_direction <- NA
     metadata$grooming_current_parter <- NA
     metadata$grooming_withinsession_num <- metadata$grooming_withinsession_num + 1
     metadata$grooming_withinevent_num <- 1
-    output$debugging_groom <- renderTable(grooming$grooming[-1, ])
+    output$debugging_groom <- renderTable(grooming$grooming)
     write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
   })
 
@@ -576,7 +542,12 @@ server <- function(input, output, session) {
 
   # end session -------------------------
   observeEvent(input$finish_focal_session, {
-    if (metadata$session_is_active) {
+    # check for ongoing grooming!!!
+    if (metadata$session_is_active & metadata$grooming_in_progress) {
+      showModal(modalDialog("grooming still ongoing: something needs to be done"))
+    }
+
+    if (metadata$session_is_active & !metadata$grooming_in_progress) {
       temp_object <- v$foctab
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
       # store focal table
@@ -589,7 +560,6 @@ server <- function(input, output, session) {
       write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
       # store sessions log
       write.table(sessions_log$log, file = paths_day$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-
 
       # update list for revisions
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
@@ -616,6 +586,8 @@ server <- function(input, output, session) {
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
       output$metadata <- renderPrint(isolate(unlist(reactiveValuesToList(metadata))))
     }
+
+
   })
 
 

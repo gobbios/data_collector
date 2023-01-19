@@ -20,6 +20,7 @@ empty_metadata <- function() {
                  get_started = FALSE,
                  session_is_active = FALSE,
                  current_foc_session_id = NA,
+                 # progress within the current session
                  progr_target = NA,
                  progr_table_lines = NA,
                  progr_na_vals = NA,

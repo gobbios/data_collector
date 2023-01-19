@@ -6,6 +6,7 @@ library(rhandsontable)
 source("helpers/make_empty_objects.R")
 source("helpers/html_styles.R")
 source("helpers/review_tables.R")
+source("helpers/startup_dialog_box.R")
 
 source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
@@ -198,8 +199,7 @@ server <- function(input, output, session) {
   xdata <- reactiveValues(presence = all_individuals)
   # v: for a single focal session
   v <- reactiveValues(foctab = NULL, # the actual data table
-                      session_start = Sys.time(),
-                      progress = NULL)
+                      session_start = Sys.time())
   # monitor sessions across day
   sessions_log <- reactiveValues(log = empty_log(), so_far = 0)
   # file paths
@@ -650,38 +650,26 @@ server <- function(input, output, session) {
 
 
   # app start up message and setup for day -----------------------
-  showModal(modalDialog(title = "hello there, what's up today?",
-                        span("please provide the necessary information"),
-                        hr(),
-                        dateInput("date", "date"),
-                        selectInput("observer", "observer", choices = unique(sample(all_observers))),
-                        # selectInput("group", "group", choices = c(all_individuals$group)),
-                        selectInput("group", "group", choices = unique(all_individuals$group), selected = "pb"),
-                        checkboxInput("desktopdir", "use 'Desktop/data_collector_data' as data directory", value = FALSE),
-                        footer = tagList(
-                          # modalButton("Cancel"),
-                          actionButton("startnewday_ok", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
-                          HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
-                        )
-  ))
+  startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
 
-  observeEvent(input$startnewday_ok, {
+  observeEvent(input$startnewday_ok_abtn, {
     metadata$date <- as.character(input$date)
     metadata$observer <- input$observer
     metadata$group <- input$group
 
     # check whether data directory is there, and if not and required, create it
-    if (input$desktopdir) {
-      paths_day$data_root_dir <- normalizePath("~/Desktop/data_collector_data", mustWork = FALSE)
-    } else {
-      paths_day$data_root_dir <- normalizePath("www", mustWork = FALSE)
-      if (!dir.exists(paths_day$data_root_dir)) dir.create(paths_day$data_root_dir)
-    }
-    if (!dir.exists(paths_day$data_root_dir) & input$desktopdir) {
-      dir.create(paths_day$data_root_dir)
-      showModal(modalDialog("created directory on Desktop: 'data_collector_data'"))
-      Sys.sleep(5)
-    }
+    paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
+    # if (input$desktopdir) {
+    #   paths_day$data_root_dir <- normalizePath("~/Desktop/data_collector_data", mustWork = FALSE)
+    # } else {
+    #   paths_day$data_root_dir <- normalizePath("www", mustWork = FALSE)
+    #   if (!dir.exists(paths_day$data_root_dir)) dir.create(paths_day$data_root_dir)
+    # }
+    # if (!dir.exists(paths_day$data_root_dir) & input$desktopdir) {
+    #   dir.create(paths_day$data_root_dir)
+    #   showModal(modalDialog("created directory on Desktop: 'data_collector_data'"))
+    #   Sys.sleep(5)
+    # }
     paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
     if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
     # path names to daily data files

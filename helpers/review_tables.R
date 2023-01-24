@@ -21,7 +21,7 @@ review_table_nn <- function(input, paths_day, metadata) {
   if (metadata$focal_sessions_so_far > 0 & file.exists(fp)) {
     if (!isTRUE(readLines(fp) == "")) {
       outtab <- read.csv(fp)
-      colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
+      # colnames(outtab) <- c("id", paste0("scan", seq_len(ncol(outtab) - 1)))
       # print(head(outtab))
       outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
       # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)

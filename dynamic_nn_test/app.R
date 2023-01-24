@@ -41,7 +41,8 @@ ui <- fluidPage(
             column(5, rHandsontableOutput("census_table"), actionButton("addnewrowtocensus", "add new row")),
             column(7, actionButton("submit_nn", "submit scan"), p(), fluidRow(htmlOutput("nn_fem")), p(), fluidRow(htmlOutput("nn_male")), p(), fluidRow(htmlOutput("nn_other"))),
             actionButton("print_grabber", "show grabber"),
-            verbatimTextOutput("out_print_grabber")
+            verbatimTextOutput("out_print_grabber"),
+            tableOutput("nn_storage")
             )
 
     )
@@ -58,8 +59,11 @@ server <- function(input, output) {
                                focal_start = NA, focal_duration = NA, focal_id = NA,
                                get_started = FALSE,
                                session_is_active = FALSE,
-                               current_foc_session_id = NA
+                               current_foc_session_id = NA,
+                             nn_scan_no = 0
                              )
+  nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
+
 
   observeEvent(input$start_day, {
     metadata$get_started <- TRUE
@@ -74,7 +78,29 @@ server <- function(input, output) {
     nn_data$nn_data <- id_table_initiate(all_individuals, group = metadata$group, n_age_sex_classes = 1, include_nn_ids = TRUE)
     nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = hot_to_r(input$census_table))
     # cat_table(nn_data$nn_data, head = FALSE)
+
+    nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
+
   })
+  observeEvent(input$submit_nn, {
+    if (metadata$session_is_active) {
+      df <- data.frame(session_id = "xxx", scan_no = as.integer(metadata$nn_scan_no + 1), id = nn_data$nn_data$id, present = nn_data$nn_data$in_nn_tracker)
+      if (nrow(nn_for_storage$nn_for_storage) == 0) {
+        nn_for_storage$nn_for_storage[1:nrow(df), ] <- df
+      } else {
+        nn_for_storage$nn_for_storage <- rbind(nn_for_storage$nn_for_storage, df)
+      }
+      metadata$nn_scan_no <- metadata$nn_scan_no + 1
+      # write file now as well
+      # reset partially
+      lapply(nn_data$nn_data$id, function(X) {
+        updateCheckboxInput(inputId = paste0("id_", X), value = FALSE)
+      }
+      )
+
+    }
+  })
+  output$nn_storage <- renderTable(nn_for_storage$nn_for_storage)
 
   nn_reactive <- reactive({
     if (metadata$session_is_active) {
@@ -88,7 +114,7 @@ server <- function(input, output) {
   observe({
     if (metadata$session_is_active) {
       # if (any(grepl("^id_", names(input)))) print(isolate(nn_reactive()))
-      lapply(isolate(nn_data$nn_data$id), function(X) {
+      lapply(nn_data$nn_data$id, function(X) {
         observeEvent(input[[paste0("id_", X)]], {
           xxx <- nn_reactive()
           xxx <- xxx[nn_data$nn_data$id]

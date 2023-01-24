@@ -28,6 +28,7 @@ empty_metadata <- function() {
                  progr_na_vals = NA,
                  progr_oos = NA,
                  progr_act = NA,
+                 nn_scan_no = 0, # for nn scans...
                  # grooming monitor
                  grooming_in_progress = FALSE,
                  grooming_direction = NA,
@@ -65,4 +66,10 @@ empty_focal_aggr <- function() {
   # id2
   # intensity
   data.frame("time_stamp" = character(0), "focal" = character(0), "id2" = character(0), "highest_intensity" = character(0), "focal_won" = logical(0))
+}
+
+
+# storage container for nn data per session
+empty_nn_storage <- function() {
+  data.frame(session_id = character(), scan_no = integer(), id = character(), present = logical())
 }

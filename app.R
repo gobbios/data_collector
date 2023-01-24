@@ -10,6 +10,9 @@ source("helpers/startup_dialog_box.R")
 source("helpers/link_directory.R")
 source("helpers/focal_aggression.R")
 source("helpers/focal_grooming.R")
+source("helpers/id_table.R")
+source("helpers/helpers.R")
+
 
 source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
@@ -27,18 +30,6 @@ all_individuals <- read.csv("id_table.csv", stringsAsFactors = FALSE)
 all_individuals$present <- FALSE
 all_individuals$swelling <- factor(NA, levels = c("", 0, 1, 2, 3))
 all_individuals$comment <- ""
-# add two new males for potential immigrants
-for (i in unique(all_individuals$group)) {
-  all_individuals <- rbind(NA, NA, all_individuals)
-  all_individuals$id[1:2] <- c("new male 1", "new male 2")
-  all_individuals$sex[1:2] <- "m"
-  all_individuals$group[1:2] <- i
-  all_individuals$is_focal[1:2] <- "no"
-  all_individuals$present[1:2] <- FALSE
-  all_individuals$swelling[1:2] <- NA
-  all_individuals$comment[1:2] <- ""
-}
-
 
 
 
@@ -194,8 +185,6 @@ server <- function(input, output, session) {
   # tracker for grooming:
   metadata <- empty_metadata()
 
-  # xdata: for daily info (group, observer, date)
-  xdata <- reactiveValues(presence = all_individuals)
   # v: for a single focal session
   v <- reactiveValues(foctab = NULL) # the actual data table
 
@@ -213,14 +202,11 @@ server <- function(input, output, session) {
   grooming <- reactiveValues(grooming = empty_grooming())
   # focal session aggression
   focal_aggression_data <- reactiveValues(aggression = empty_focal_aggr())
-  # nearest neighbors
-  nn <- reactiveValues(ini_state = NULL, # ini_state = setNames(rep(FALSE, n), ids)
-                       firstrun = TRUE,
-                       sex = NULL,
-                       ids = NULL,
-                       final = NULL)
-  individuals <- reactiveValues(for_nn = NULL)
 
+  # for census and NN (new style)
+  census <- reactiveValues(census = NULL)
+  nn_data <- reactiveValues(nn_data = NULL)
+  nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
 
   # reload data -------------------------
   observeEvent(input$show_available_days, {
@@ -259,10 +245,6 @@ server <- function(input, output, session) {
 
 
 
-
-
-
-
   # nearest neighbors -------------------------
   observeEvent(input$nn_scan, {
     if (metadata$session_is_active) {
@@ -272,73 +254,70 @@ server <- function(input, output, session) {
   })
 
   nn_reactive <- reactive({
-    # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (metadata$session_is_active) {
-      o <- setNames(unlist(lapply(1:length(nn$ids), function(X) {
-        input[[paste0("id_", nn$ids[X])]]
-      })), nn$ids)
+      setNames(unlist(lapply(nn_data$nn_data$id, function(X) {
+        input[[paste0("id_", X)]]
+      })), nn_data$nn_data$id[paste0("id_", nn_data$nn_data$id) %in% names(input)])
     }
   })
 
+  # update current nn tracker
   observe({
     if (metadata$session_is_active) {
-      lapply(isolate(nn$ids), function(X) {
+      # if (any(grepl("^id_", names(input)))) print(isolate(nn_reactive()))
+      lapply(nn_data$nn_data$id, function(X) {
         observeEvent(input[[paste0("id_", X)]], {
-          if (X == nn$ids[length(nn$ids)]) {
-            nn$firstrun <- FALSE
-          }
-          nn$ini_state <- nn_reactive()
+          xxx <- nn_reactive()
+          xxx <- xxx[nn_data$nn_data$id]
+          nn_data$nn_data$in_nn_tracker <<- xxx
         })
       })
+      # cat("--------in 'observe' - nn:---------\n")
+      # if (!is.null(nn_data$nn_data)) cat_table(nn_data$nn_data, head = FALSE)
+      # cat(unlist(lapply(isolate(nn_data$nn_data$id), function(X)input[[paste0("id_", X)]])), "\n")
     }
   })
 
   observeEvent(input$submit_nn, {
-    # store to reactive object
-    if (is.null(nn$final)) {
-      nn_final <- cbind(nn$ids, nn_reactive())
-    } else {
-      nn_final <- cbind(nn$final, nn_reactive())
+    if (metadata$session_is_active) {
+      df <- data.frame(session_id = metadata$current_foc_session_id,
+                       scan_no = as.integer(metadata$nn_scan_no + 1),
+                       id = nn_data$nn_data$id,
+                       present = nn_data$nn_data$in_nn_tracker)
+      if (nrow(nn_for_storage$nn_for_storage) == 0) {
+        nn_for_storage$nn_for_storage[1:nrow(df), ] <- df
+      } else {
+        nn_for_storage$nn_for_storage <- rbind(nn_for_storage$nn_for_storage, df)
+      }
+      metadata$nn_scan_no <- metadata$nn_scan_no + 1
+      # write file now as well
+      write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
+      # reset
+      nn_data$nn_data$in_nn_tracker <- FALSE
+      lapply(nn_data$nn_data$id, function(X) {
+        updateCheckboxInput(inputId = paste0("id_", X), value = FALSE)
+      })
     }
-    nn$final <- nn_final
-    # reset for next scan:
-    nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
-    nn$firstrun <- TRUE
-
     updateTabsetPanel(session, inputId = "nav_home", selected = "focal") # shift focus to home tab
   })
 
 
 
 
+
   output$nn_fem <- renderUI({
-    # ids <- c(all_individuals$id[all_individuals$group == input$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (metadata$session_is_active) {
-      if (nn$firstrun) {
-        lapply(render_nn(nn$ids, selected = nn$ini_state, sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
-      } else {
-        lapply(render_nn(nn$ids, selected = nn_reactive(), sex = nn$sex, do_which = "f"), function(X) HTML(paste(X)))
-      }
+      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "f"), function(X) HTML(paste(X)))
     }
   })
   output$nn_male <- renderUI({
-    ids <- c(all_individuals$id[all_individuals$group == metadata$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (metadata$session_is_active) {
-      if (nn$firstrun) {
-        lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
-      } else {
-        lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "m"), function(X) HTML(paste(X)))
-      }
+      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "m"), function(X) HTML(paste(X)))
     }
   })
   output$nn_other <- renderUI({
-    ids <- c(all_individuals$id[all_individuals$group == metadata$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
     if (metadata$session_is_active) {
-      if (nn$firstrun) {
-        lapply(render_nn(ids, selected = nn$ini_state, sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
-      } else {
-        lapply(render_nn(ids, selected = nn_reactive(), sex = nn$sex, do_which = "o"), function(X) HTML(paste(X)))
-      }
+      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "o"), function(X) HTML(paste(X)))
     }
   })
 
@@ -486,13 +465,15 @@ server <- function(input, output, session) {
     # reset focal aggression
     focal_aggression_data$aggression <- empty_focal_aggr()
 
+    # initiate nn scan table
+    nn_data$nn_data <- id_table_initiate(all_individuals, group = metadata$group, n_age_sex_classes = 1, include_nn_ids = TRUE)
+    # and update from current census
+    nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = hot_to_r(input$census_table))
+    # initial nn_storage object for given session
+    nn_for_storage$nn_for_storage <- empty_nn_storage()
+    metadata$nn_scan_no <- 0
+    write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
 
-    # set nn data
-    # ids <- c(all_individuals$id[all_individuals$group == metadata$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
-    nn$ids <- c(all_individuals$id[all_individuals$group == metadata$group], c(paste0(c("AM"), 1:6), paste0(c("AF"), 1:6), paste0(c("J"), 1:6), paste0(c("I"), 1:6)))
-    nn$ini_state <- setNames(rep(FALSE, length(nn$ids)), nn$ids)
-    nn$sex <- c(all_individuals$sex[all_individuals$group == metadata$group], rep("o", 24))
-    nn$final <- NULL
   })
 
   remcols <- c("time_stamp", "sample")
@@ -553,7 +534,7 @@ server <- function(input, output, session) {
       # store focal table
       write.csv(temp_object, file = paths_sessions$current_foc_tab, row.names = FALSE, quote = FALSE)
       # store nn object
-      write.csv(nn$final, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
+      write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
       # store grooming
       write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
       # store aggression
@@ -575,7 +556,6 @@ server <- function(input, output, session) {
       metadata$progr_na_vals = as.numeric(metadata$focal_duration)
       metadata$progr_oos = 0
       metadata$progr_act = 0
-
 
 
       metadata$current_foc_session_id <- NA
@@ -614,9 +594,9 @@ server <- function(input, output, session) {
     paths_day$day_meta <- file.path(paths_day$dirpath, paste0(filename_root, "_meta.csv"))
     output$info_paths_day <- renderPrint(isolate(reactiveValuesToList(paths_day))) # diagnostics/info
 
+    # initiate census table
+    census$census <- id_table_initiate(all_individuals, group = metadata$group, include_nn_ids = FALSE)
 
-    individuals$for_nn <- xdata$presence[xdata$presence$group == metadata$group, ]
-    xdata$presence <- xdata$presence[xdata$presence$group == metadata$group, ] # select relevant group...
     metadata$get_started <- TRUE
     output$dategroupobs <- renderText({
       paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
@@ -627,6 +607,8 @@ server <- function(input, output, session) {
 
     # write files
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = paths_day$day_meta, row.names = TRUE, quote = FALSE)
+    write.table(census$census, file = paths_day$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+
   })
 
 
@@ -635,40 +617,41 @@ server <- function(input, output, session) {
     showModal(additional_group_for_census(all_groups = unique(all_individuals$group), current_group = metadata$group))
   })
   observeEvent(input$add_group_selected_submit, {
-    if (!is.null(xdata$presence) & metadata$get_started == TRUE) {
-      xdata$presence <- rbind(xdata$presence, all_individuals[all_individuals$group == input$add_group_selected, ])
+    if (!is.null(census$census) & metadata$get_started == TRUE) {
+      xxx <- id_table_initiate(xdata = all_individuals, group = input$add_group_selected, include_nn_ids = FALSE)
+      xxx <- xxx[!xxx$id %in% c("new1", "new2"), ]
+      cat_table(xxx, head = FALSE)
+      # census$census <- rbind(census$census, all_individuals[all_individuals$group == input$add_group_selected, ])
+      census$census <- rbind(census$census, xxx)
     }
     removeModal()
   })
   observeEvent(input$census_table, {
-    # print(paste("presence is NULL:", is.null(xdata$presence), "\n"))
-    # print(paste("day got started:", metadata$get_started, "\n"))
     xxx <- hot_to_r(input$census_table)
     # print(paste("nrow presence:", nrow(xxx), "\n"))
-    if (!is.null(xdata$presence) & metadata$get_started == TRUE) {
+    if (!is.null(census$census) & metadata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table)
       write.table(xxx, file = paths_day$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      # update nn table if necessary
+      nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = xxx)
     }
   })
   observeEvent(input$addnewrowtocensus, {
-    if (!is.null(xdata$presence) & metadata$get_started == TRUE) {
-      xxx <- hot_to_r(input$census_table)
-      xxx <- rbind(xxx, NA)
-      xxx$present[nrow(xxx)] <- FALSE
-      xxx$group[nrow(xxx)] <- xxx$group[1]
-      xdata$presence <- xxx
+    if (!is.null(census$census) & metadata$get_started == TRUE) {
+      census$census <- hot_to_r(input$census_table)
+      census$census <- rbind(census$census, NA)
     }
   })
 
 
   output$census_table <- renderRHandsontable({
-    if (!is.null(xdata$presence) & metadata$get_started == TRUE) {
-      xtab <- rhandsontable(xdata$presence, rowHeaders = NULL)
+    if (!is.null(census$census) & metadata$get_started == TRUE) {
+      xtab <- rhandsontable(census$census, rowHeaders = NULL)
       # make certain cells/columns read-only
       xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
-      swell_col <- which(colnames(xdata$presence) == "swelling")
-      for (i in which(xdata$presence$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
-      # xtab <- rhandsontable(xdata$presence[, -c(which(colnames(xdata$presence) %in% c("is_focal", "sex")))], rowHeaders = NULL)
+      swell_col <- which(colnames(census$census) == "swelling")
+      for (i in which(census$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
+      # xtab <- rhandsontable(census$census[, -c(which(colnames(census$census) %in% c("is_focal", "sex")))], rowHeaders = NULL)
       # xtab <- hot_row(xtab, c(1,3, 5), readOnly = TRUE)
       # xtab <- hot_col(xtab, c(1), readOnly = TRUE)
       # xtab <- hot_col(xtab, c(1), readOnly = TRUE)

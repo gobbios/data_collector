@@ -407,12 +407,19 @@ server <- function(input, output, session) {
     } else {
       showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == metadata$group & all_individuals$is_focal == "yes"]))
       updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
+      metadata$focal_start_hour = curtime()[1]
+      metadata$focal_start_minute = curtime()[2]
     }
   })
+  
+  
 
   observeEvent(input$focal_session_start_abtn, {
     # reset
-    metadata$focal_start <- as.character(strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"))
+    # metadata$focal_start <- as.character(strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"))
+    metadata$focal_start <- as.character(strptime(paste0(metadata$date, " ", metadata$focal_start_hour, ":", metadata$focal_start_minute, ":00"), format = "%Y-%m-%d %H:%M:%S"))
+    
+    
     metadata$focal_duration <- input$focal_duration
     metadata$focal_id <- input$focal_name
 
@@ -475,6 +482,49 @@ server <- function(input, output, session) {
     write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
 
   })
+  
+  # start session: time display----------------
+  observe( {
+    if (!is.na(metadata$focal_start_hour) & !is.na(metadata$focal_start_minute)) {
+      x <- paste0(sprintf("%02.f", metadata$focal_start_hour), 
+                  ":", 
+                  sprintf("%02.f", metadata$focal_start_minute))
+      output$focal_session_time_val <- renderUI(HTML(paste(x)))
+    }
+  })
+  observeEvent(input$incr, {
+    h <- as.numeric(metadata$focal_start_hour)
+    m <- as.numeric(metadata$focal_start_minute)
+    if (is.na(m)) m <- curtime()[2]
+    if (is.na(h)) h <- curtime()[1]
+    if (m > 59 | m < 0) m <- curtime()[2]
+    if (h > 23 | h < 0) h <- curtime()[1]
+    
+    m <- m + 1
+    if (m == 60) {
+      m <- 0
+      h <- h + 1
+    }
+    metadata$focal_start_minute <- m
+    metadata$focal_start_hour <- h
+  })
+  observeEvent(input$decr, {
+    h <- as.numeric(metadata$focal_start_hour)
+    m <- as.numeric(metadata$focal_start_minute)
+    if (is.na(m)) m <- curtime()[2]
+    if (is.na(h)) h <- curtime()[1]
+    if (m > 59 | m < 0) m <- curtime()[2]
+    if (h > 23 | h < 0) h <- curtime()[1]
+    
+    m <- m - 1
+    if (m == -1) {
+      m <- 59
+      h <- h - 1
+    }
+    metadata$focal_start_minute <- m
+    metadata$focal_start_hour <- h
+  })
+  
 
   remcols <- c("time_stamp", "sample")
   output$focal_table <- renderRHandsontable({

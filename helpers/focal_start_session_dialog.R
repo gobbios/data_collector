@@ -7,7 +7,12 @@ focal_start_session_dialog <- function(potential_focals = NULL) {
     #   div(tags$b("Invalid name of data object", style = "color: red;")),
 
     selectInput('focal_name', "focal subject", choices = c("_none", potential_focals), selected = pot),
-    textInput('focal_start', 'focal start time', value = Sys.time() + 60),
+    h5("select the starting time"),
+    splitLayout(cellWidths = c("15%", "20%", "15%"), 
+                actionButton("decr", "", icon = icon("circle-minus")),
+                htmlOutput("focal_session_time_val"),
+                actionButton("incr", "", icon = icon("circle-plus"))
+    ),
     numericInput('focal_duration', 'focal duration', value = 6, min = 2, max = 10, step = 2),
 
     footer = tagList(

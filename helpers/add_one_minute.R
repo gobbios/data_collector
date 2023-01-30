@@ -1,3 +1,19 @@
+curtime <- function() {
+  x <- unlist(as.POSIXlt(Sys.time()))
+  h <- as.numeric(x["hour"])
+  m <- as.numeric(x["min"])
+  s <- ceiling(as.numeric(x["sec"]))
+  
+  if (s > 30) {
+    m <- m + 1
+  }
+  if (m == 60) {
+    m <- 0
+    h <- h + 1
+  }
+  
+  c(h, m)
+}
 
 # 06:45 -> 06:46
 # 14:59 -> 15:00

@@ -13,33 +13,36 @@ empty_log <- function() {
 
 # metadata to recover/reload days
 # reactive target: 'metadata'
-empty_metadata <- function() {
-  reactiveValues(date = NULL,
-                 observer = NULL,
-                 group = NULL,
-                 focal_sessions_so_far = 0,
-                 focal_duration = NA, 
-                 focal_id = NA,
-                 focal_start_hour = NA, 
-                 focal_start_minute = NA,
-                 get_started = FALSE,
-                 session_is_active = FALSE,
-                 current_foc_session_id = NA,
-                 # progress within the current focal session
-                 progr_target = NA,
-                 progr_table_lines = NA,
-                 progr_na_vals = NA,
-                 progr_oos = NA,
-                 progr_act = NA,
-                 nn_scan_no = 0, # for nn scans...
-                 # grooming monitor
-                 grooming_in_progress = FALSE,
-                 grooming_direction = NA,
-                 grooming_current_parter = NA,
-                 grooming_withinsession_num = 1,
-                 grooming_withinevent_num = 1
-                 )
-  # metadata$focal_sessions_so_far
+empty_metadata <- function(as_pure_list = FALSE) {
+  out <- reactiveValues(date = NULL,
+                        observer = NULL,
+                        group = NULL,
+                        get_started = FALSE,
+                        focal_sessions_so_far = 0,
+                        # current focal session
+                        focal_duration = NA, 
+                        focal_id = NA,
+                        focal_start = NA,
+                        focal_start_hour = NA, 
+                        focal_start_minute = NA,
+                        session_is_active = FALSE,
+                        current_foc_session_id = NA,
+                        # progress within the current focal session
+                        progr_target = NA,
+                        progr_table_lines = NA,
+                        progr_na_vals = NA,
+                        progr_oos = NA,
+                        progr_act = NA,
+                        nn_scan_no = 0, # for nn scans...
+                        # grooming monitor
+                        grooming_in_progress = FALSE,
+                        grooming_direction = NA,
+                        grooming_current_parter = NA,
+                        grooming_withinsession_num = 1,
+                        grooming_withinevent_num = 1
+  )
+  if (as_pure_list) out <- isolate(reactiveValuesToList(out))
+  out
 }
 
 

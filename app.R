@@ -11,7 +11,7 @@ source("helpers/link_directory.R")
 source("helpers/focal_aggression.R")
 source("helpers/focal_grooming.R")
 source("helpers/id_table.R")
-source("helpers/helpers.R")
+source("helpers/info_and_debug.R")
 
 
 source("helpers/empty_foc_table.R")
@@ -63,7 +63,8 @@ ui <- fluidPage(
              tabPanel("home",
                       column(2, "",
                              htmlOutput("dategroupobs"),
-                             actionButton("open_data_dir_abtn", "open data directory")
+                             actionButton("open_data_dir_abtn", "open data directory"),
+                             actionButton("show_metadata_abtn", "show meta data")
                       ),
                       column(10, "",
                              # HTML('<p style= "color: red">bla</p>'),
@@ -416,10 +417,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$focal_session_start_abtn, {
     # reset
-    # metadata$focal_start <- as.character(strptime(input$focal_start, format = "%Y-%m-%d %H:%M:%S"))
     metadata$focal_start <- as.character(strptime(paste0(metadata$date, " ", metadata$focal_start_hour, ":", metadata$focal_start_minute, ":00"), format = "%Y-%m-%d %H:%M:%S"))
-    
-    
     metadata$focal_duration <- input$focal_duration
     metadata$focal_id <- input$focal_name
 
@@ -721,7 +719,30 @@ server <- function(input, output, session) {
   observeEvent(input$go_to_census_btn, {
     updateTabsetPanel(session, inputId = "nav_home", selected = "census") # shift focus to census tab
   })
-
+  
+  # debugging and info ------------------------
+  
+  observeEvent(input$show_metadata_abtn, {
+    showModal(modalDialog(
+      # title = "",
+      easyClose = TRUE,
+      fluidRow(
+        column(5, htmlOutput("metadata_info_out1"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px"), 
+        column(5, htmlOutput("metadata_info_out2"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px")
+      ),
+      # hr(),
+      fluidRow(
+        column(5, htmlOutput("metadata_info_out3"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px"), 
+        column(5, htmlOutput("metadata_info_out4"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px")
+      )
+      
+    ))
+    output$metadata_info_out1 <- renderUI(display_meta(reactiveValuesToList(metadata), 1))
+    output$metadata_info_out2 <- renderUI(display_meta(reactiveValuesToList(metadata), 2))
+    output$metadata_info_out3 <- renderUI(display_meta(reactiveValuesToList(metadata), 3))
+    output$metadata_info_out4 <- renderUI(display_meta(reactiveValuesToList(metadata), 4))
+  })
+  
   # simple debuggging/diagnostics elements
   output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
   output$rsession_info <- renderPrint(sessionInfo())

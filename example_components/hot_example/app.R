@@ -4,7 +4,7 @@
 
 library(shiny)
 library(rhandsontable)
-allx <- read.csv("../id_table.csv", stringsAsFactors = FALSE)
+allx <- read.csv("../../id_table.csv", stringsAsFactors = FALSE)
 allx$present <- FALSE
 allx$swelling <- factor(NA, levels = 1:3)
 

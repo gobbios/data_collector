@@ -2,15 +2,15 @@
 library(shiny)
 library(rhandsontable)
 
-source("../helpers/html_styles.R")
-source("../helpers/id_table.R")
-source("../helpers/render_nn.R")
-source("../helpers/helpers.R")
+source("../../helpers/html_styles.R")
+source("../../helpers/id_table.R")
+source("../../helpers/render_nn.R")
+source("../../helpers/info_and_debug.R")
 
 
 
 # individual table
-all_individuals <- read.csv("../id_table.csv", stringsAsFactors = FALSE)
+all_individuals <- read.csv("../../id_table.csv", stringsAsFactors = FALSE)
 all_individuals$present <- FALSE
 all_individuals$swelling <- factor(NA, levels = c("", 0, 1, 2, 3))
 all_individuals$comment <- ""

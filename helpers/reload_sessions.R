@@ -72,3 +72,40 @@ read_meta <- function(folder) {
   out
 }
 
+read_meta_2 <- function(folder, paths_day) {
+  xpaths <- list.files(file.path(paths_day, folder), full.names = TRUE, pattern = "meta.csv$")
+  print(xpaths)
+  if (length(xpaths) != 1) stop("didn't find exactly one ")
+  x <- read.csv(xpaths, row.names = 1)
+
+  metadata <- list()
+  metadata$date <- x["date", 1]
+  metadata$observer <- x["observer", 1]
+  metadata$group <- x["group", 1]
+  metadata$get_started <- as.logical(x["get_started", 1])
+  metadata$focal_sessions_so_far <- as.numeric(x["focal_sessions_so_far", 1])
+  # current focal session
+  metadata$focal_duration <- as.numeric(x["focal_duration", 1])
+  metadata$focal_id <- x["focal_id", 1]
+  metadata$focal_start <- x["focal_start", 1]
+  metadata$focal_start_hour <- x["focal_start_hour", 1]
+  metadata$focal_start_minute <- x["focal_start_minute", 1]
+  metadata$session_is_active <- as.logical(x["session_is_active", 1])
+  metadata$current_foc_session_id <- x["current_foc_session_id", 1]
+  # progress within the current focal session
+  metadata$progr_target <- as.numeric(x["progr_target", 1])
+  metadata$progr_table_lines <- as.numeric(x["progr_table_lines", 1])
+  metadata$progr_na_vals <- as.numeric(x["progr_na_vals", 1])
+  metadata$progr_oos <- as.numeric(x["progr_oos", 1])
+  metadata$progr_act <- as.numeric(x["progr_act", 1])
+  metadata$nn_scan_no <- as.numeric(x["nn_scan_no", 1])
+  # grooming monitor
+  metadata$grooming_in_progress <- as.logical(x["grooming_in_progress", 1])
+  metadata$grooming_direction <- x["grooming_direction", 1]
+  metadata$grooming_current_parter <- x["grooming_current_parter", 1]
+  metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
+  metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
+  metadata
+}
+
+

@@ -34,7 +34,7 @@ all_individuals$comment <- ""
 
 
 # list with observers (to be outsourced to csv file eventually)
-all_observers <- c("maria", "carel", "jeanne", "robert", "joan", "julia")
+all_observers <- c("findus", "maria", "carel", "jeanne", "robert", "joan", "julia")
 # list with all activity codes for point sampling
 activity_codes <- c("r", "fe", "gr", "oos")
 
@@ -129,8 +129,8 @@ ui <- fluidPage(
              ),
 
              tabPanel("diagnostics",
-                      h4("file paths to daily files:"),
-                      verbatimTextOutput("info_paths_day"),
+                      # h4("file paths to daily files:"),
+                      # verbatimTextOutput("info_paths_day"),
                       h4("focal session overview:"),
                       tableOutput("log"),
                       h4("current working directory"),
@@ -175,28 +175,21 @@ server <- function(input, output, session) {
   observeEvent(input$test_stuff, {
     print(unlist(isolate(reactiveValuesToList(v))$progress))
     print(unlist(isolate(reactiveValuesToList(metadata))))
-    # print(isolate(reactiveValuesToList(fps)))
-    # print(isolate(reactiveValuesToList(paths_sessions)))
   })
 
   # metadata (info regarding day): list with names
-  # once per day: group date observer focal_sessions_so_far focal_duration
+  # once per day: group date observer focal_sessions_so_far; also paths to day's directory and global files (census, adlib aggr, session log, stored metadata)
   # per focal session: focal_start focal_name get_started session_is_active current_foc_session_id
-  # progress tracker within a focal session:
-  # tracker for grooming:
+  # per focal session: paths to four files (point samples, grooming, nn, aggr)
+  # progress tracker within a focal session (activity counter etc...)
+  # tracker for grooming
   metadata <- empty_metadata()
 
-  # v: for a single focal session
+  # v: for a single focal session (point samples)
   v <- reactiveValues(foctab = NULL) # the actual data table
-
+  
   # monitor sessions across day
   sessions_log <- reactiveValues(log = empty_log())
-  # file paths
-  # fixed throughout the day (logs, census etc)
-  paths_day <- reactiveValues(data_root_dir = NULL, dirpath = NULL, daily_census = NULL, sessions_log = NULL, adlib_aggr = NULL, day_meta = NULL)
-  # changing ones (focal sessions)
-  paths_sessions <- reactiveValues(current_foc_tab = NULL, current_foc_nn = NULL, current_foc_groom = NULL, current_foc_aggr = NULL)
-
   # adlib aggression data
   adlib_agg <- reactiveValues(dyadic = empty_adlib_aggr())
   # focal session grooming
@@ -204,42 +197,45 @@ server <- function(input, output, session) {
   # focal session aggression
   focal_aggression_data <- reactiveValues(aggression = empty_focal_aggr())
 
-  # for census and NN (new style)
+  # census
   census <- reactiveValues(census = NULL)
+  # NN (new style)
   nn_data <- reactiveValues(nn_data = NULL)
   nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
 
   # reload data -------------------------
   observeEvent(input$show_available_days, {
     # available days
-    ad <- reload_list_days(paths_day$data_root_dir)
-    updateSelectInput(session, inputId = "available_days_selector", choices = ad$day_folder_display)
+    ad <- reload_list_days(metadata$data_root_dir)
+    updateSelectInput(session, inputId = "available_days_selector", choices = ad$day_folder_display[!ad$empty])
     output$reload_days_available <- renderTable(ad)
   })
   observeEvent(input$reload_selected_day, {
     # print(input$available_days_selector)
-    # print(paths_day$data_root_dir)
-    if (!is.null(input$available_days_selector) & input$available_days_selector != "") {
-      # ss <- reload_day_prep(day_folder = input$available_days_selector, basefolder = paths_day$data_root_dir)
-      # output$reload_sessions_available <- renderTable(ss$sessions_log)
-    }
     
     if (!is.null(input$available_days_selector) & input$available_days_selector != "") {
       # tried to outsource this into a function, but not yet successfully (read_meta_2)
-      # static_meta <- read_meta_2(input$available_days_selector, paths_day = paths_day$data_root_dir)
-      # for (i in names(static_meta)) {
-      #   metadata[[i]] <- static_meta[[i]]
-      #   
-      #   print(i)
-      # }
-      # print(metadata$metadata$session_is_active)
       
-      
-      xpaths <- list.files(file.path(paths_day$data_root_dir, input$available_days_selector), full.names = TRUE, pattern = "meta.csv$")
+      xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector), full.names = TRUE, pattern = "meta.csv$")
       print(xpaths)
       if (length(xpaths) != 1) stop("didn't find exactly one ")
       x <- read.csv(xpaths, row.names = 1)
-
+      
+      # paths to daily info
+      metadata$data_root_dir <- x["data_root_dir", 1]
+      metadata$day_dir <- x["day_dir", 1]
+      metadata$daily_census <- x["daily_census", 1]
+      metadata$adlib_aggr <- x["adlib_aggr", 1]
+      metadata$sessions_log <- x["sessions_log", 1]
+      metadata$day_meta <- x["day_meta", 1]
+      
+      # paths to active session if any
+      metadata$active_foc_tab <- x["active_foc_tab", 1]
+      metadata$active_foc_nn <- x["active_foc_nn", 1]
+      metadata$active_foc_groom <- x["active_foc_groom", 1]
+      metadata$active_foc_aggr <- x["active_foc_aggr", 1]
+      
+      # actual meta data for day
       metadata$date <- x["date", 1]
       metadata$observer <- x["observer", 1]
       metadata$group <- x["group", 1]
@@ -249,8 +245,8 @@ server <- function(input, output, session) {
       metadata$focal_duration <- as.numeric(x["focal_duration", 1])
       metadata$focal_id <- x["focal_id", 1]
       metadata$focal_start <- x["focal_start", 1]
-      metadata$focal_start_hour <- x["focal_start_hour", 1]
-      metadata$focal_start_minute <- x["focal_start_minute", 1]
+      metadata$focal_start_hour <- as.numeric(x["focal_start_hour", 1])
+      metadata$focal_start_minute <- as.numeric(x["focal_start_minute", 1])
       metadata$session_is_active <- as.logical(x["session_is_active", 1])
       metadata$current_foc_session_id <- x["current_foc_session_id", 1]
       # progress within the current focal session
@@ -267,15 +263,32 @@ server <- function(input, output, session) {
       metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
       metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
       
+      # update reactive objects
+      # if there is an active focal session
+      if (!is.na(metadata$active_foc_tab)) v$foctab <- read.csv(metadata$active_foc_tab)
+      if (!is.na(metadata$active_foc_groom)) grooming$grooming <- read.csv(metadata$active_foc_groom)
+      if (!is.na(metadata$active_foc_aggr)) focal_aggression_data$aggression <- read.csv(metadata$active_foc_aggr)
+      if (!is.na(metadata$active_foc_nn)) {
+        nn_data$nn_data <- read.csv(file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn))
+        nn_for_storage$nn_for_storage <- read.csv(file = metadata$active_foc_nn)
+      }
+      # and daily stuff that should be there regardless
+      census$census <- read.csv(file = metadata$daily_census)
+      sessions_log$log <- read.csv(file = metadata$sessions_log)
+      adlib_agg$dyadic <- read.csv(file = metadata$adlib_aggr)
+      
+      session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
+      
     }
   })
 
 
   # reviewing of existing data ---------------------------
-  output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, paths_day = paths_day, metadata = metadata))
-  output$rev_nn <- renderRHandsontable(review_table_nn(input = input, paths_day = paths_day, metadata = metadata))
-  output$rev_groom <- renderRHandsontable(review_table_groom(input = input, paths_day = paths_day, metadata = metadata))
-  output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, paths_day = paths_day, metadata = metadata))
+  output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
+  output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata))
+  output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata))
+  output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata))
 
 
 
@@ -284,7 +297,6 @@ server <- function(input, output, session) {
   observeEvent(input$nn_scan, {
     if (metadata$session_is_active) {
       updateTabsetPanel(session, inputId = "nav_home", selected = "nearest neighbors")
-      # print(nn_reactive())
     }
   })
 
@@ -326,7 +338,8 @@ server <- function(input, output, session) {
       }
       metadata$nn_scan_no <- metadata$nn_scan_no + 1
       # write file now as well
-      write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
+      write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
+      write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
       # reset
       nn_data$nn_data$in_nn_tracker <- FALSE
       lapply(nn_data$nn_data$id, function(X) {
@@ -387,7 +400,7 @@ server <- function(input, output, session) {
                                                                   focal_id = metadata$focal_id,
                                                                   current_grooming_parter = metadata$grooming_current_parter))
 
-    write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
   })
 
   observeEvent(input$change_grooming, {
@@ -401,7 +414,7 @@ server <- function(input, output, session) {
     output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
                                                                              focal_id = metadata$focal_id,
                                                                              current_grooming_parter = metadata$grooming_current_parter))
-    write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
   })
 
   observeEvent(input$stop_grooming, {
@@ -413,7 +426,7 @@ server <- function(input, output, session) {
     metadata$grooming_withinsession_num <- metadata$grooming_withinsession_num + 1
     metadata$grooming_withinevent_num <- 1
     output$debugging_groom <- renderTable(grooming$grooming)
-    write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
   })
 
   # other focal session aggression -------------------
@@ -424,7 +437,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$focal_aggression_abtn, {
     focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, input_list = input)
-    write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
+    write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
     removeModal()
   })
 
@@ -469,41 +482,43 @@ server <- function(input, output, session) {
     s <- paste0(as.character(as.Date(metadata$date)), "_", metadata$focal_id, "_", metadata$observer)
     s <- paste0(s, "_", sum(sessions_log$log$focal_id == metadata$focal_id) + 1)
     metadata$current_foc_session_id <- s
-    paths_sessions$current_foc_tab <- file.path(paths_day$dirpath, paste0(s, "_foctab.csv"))
-    paths_sessions$current_foc_groom <- file.path(paths_day$dirpath, paste0(s, "_groom.csv"))
-    paths_sessions$current_foc_aggr <- file.path(paths_day$dirpath, paste0(s, "_aggr.csv"))
-    paths_sessions$current_foc_nn <- file.path(paths_day$dirpath, paste0(s, "_nn.csv"))
-    # write.table(v$foctab, file = v$filename, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-
+    metadata$active_foc_tab <- file.path(metadata$day_dir, paste0(s, "_foctab.csv"))
+    metadata$active_foc_nn <- file.path(metadata$day_dir, paste0(s, "_nn.csv"))
+    metadata$active_foc_groom <- file.path(metadata$day_dir, paste0(s, "_groom.csv"))
+    metadata$active_foc_aggr <- file.path(metadata$day_dir, paste0(s, "_aggr.csv"))
     # update daily monitor
     metadata$focal_sessions_so_far <- as.numeric(metadata$focal_sessions_so_far) + 1
     sessions_log$log[metadata$focal_sessions_so_far, ] <- NA
     sessions_log$log$session_id[metadata$focal_sessions_so_far] <- metadata$current_foc_session_id
-    sessions_log$log$filename[metadata$focal_sessions_so_far] <- paths_sessions$current_foc_tab
     sessions_log$log$focal_id[metadata$focal_sessions_so_far] <- metadata$focal_id
     sessions_log$log$focal_counter[metadata$focal_sessions_so_far] <- sum(sessions_log$log$focal_id == metadata$focal_id)
     sessions_log$log$session_created[metadata$focal_sessions_so_far] <- as.character(Sys.time())
-    print(sessions_log$log)
+    sessions_log$log$path_foc_tab[metadata$focal_sessions_so_far] <- metadata$active_foc_tab
+    sessions_log$log$path_foc_nn[metadata$focal_sessions_so_far] <- metadata$active_foc_nn
+    sessions_log$log$path_foc_groom[metadata$focal_sessions_so_far] <- metadata$active_foc_groom
+    sessions_log$log$path_foc_aggr[metadata$focal_sessions_so_far] <- metadata$active_foc_aggr
+    cat_table(sessions_log$log)
 
-
-    write.table(v$foctab, file = paths_sessions$current_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    write.table(sessions_log$log, file = paths_day$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = paths_day$day_meta, row.names = TRUE, quote = FALSE)
+    write.table(v$foctab, file = metadata$active_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
 
     output$log <- renderTable({sessions_log$log})
     removeModal()
 
-    # reset grooming
+    # start new grooming table (reset old one)
     metadata$grooming_in_progress <- FALSE
     metadata$grooming_direction <- NA
     metadata$grooming_current_parter <- NA
     metadata$grooming_withinsession_num <- 1
     metadata$grooming_withinevent_num <- 1
     grooming$grooming = empty_grooming()
-
-    # reset focal aggression
+    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+    
+    # start new focal aggression (reset old one)
     focal_aggression_data$aggression <- empty_focal_aggr()
-
+    write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
+    
     # initiate nn scan table
     nn_data$nn_data <- id_table_initiate(all_individuals, group = metadata$group, n_age_sex_classes = 1, include_nn_ids = TRUE)
     # and update from current census
@@ -511,8 +526,9 @@ server <- function(input, output, session) {
     # initial nn_storage object for given session
     nn_for_storage$nn_for_storage <- empty_nn_storage()
     metadata$nn_scan_no <- 0
-    write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
-
+    write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
+    write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
+    
   })
   
   # start session: time display----------------
@@ -575,7 +591,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$focal_table, {
     xxx <- hot_to_r(input$focal_table)
-    write.table(xxx, file = paths_sessions$current_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(xxx, file = metadata$active_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
 
 
@@ -614,42 +630,53 @@ server <- function(input, output, session) {
       temp_object <- v$foctab
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
       # store focal table
-      write.csv(temp_object, file = paths_sessions$current_foc_tab, row.names = FALSE, quote = FALSE)
+      write.csv(temp_object, file = metadata$active_foc_tab, row.names = FALSE, quote = FALSE)
       # store nn object
-      write.csv(nn_for_storage$nn_for_storage, file = paths_sessions$current_foc_nn, row.names = FALSE, quote = FALSE)
+      write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
+      write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
       # store grooming
-      write.csv(grooming$grooming, file = paths_sessions$current_foc_groom, row.names = FALSE, quote = FALSE)
+      write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
       # store aggression
-      write.csv(focal_aggression_data$aggression, file = paths_sessions$current_foc_aggr, row.names = FALSE, quote = FALSE)
+      write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
       # store sessions log
-      write.table(sessions_log$log, file = paths_day$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
       # update list for revisions
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
       updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
 
-      # reset reactive values object
+      # reset reactive values objects
       v$foctab = NULL # the actual data table
+      # and metadata (including file paths) pertaining to focal sessions
       metadata$focal_id <- NA
-      metadata$current_foc_session_id = NA
-      metadata$session_is_active = FALSE
-      metadata$progr_target = as.numeric(metadata$focal_duration)
-      metadata$progr_table_lines = as.numeric(metadata$focal_duration)
-      metadata$progr_na_vals = as.numeric(metadata$focal_duration)
-      metadata$progr_oos = 0
-      metadata$progr_act = 0
-
+      metadata$current_foc_session_id <- NA
+      metadata$session_is_active <- FALSE
+      metadata$focal_start <- NA
+      metadata$focal_start_hour <- NA
+      metadata$focal_start_minute <- NA
+      
+      metadata$progr_target <- NA
+      metadata$progr_table_lines <- NA
+      metadata$progr_na_vals <- NA
+      metadata$progr_oos <- NA
+      metadata$progr_act <- NA
+      metadata$nn_scan_no <- NA
+      metadata$grooming_in_progress <- FALSE
+      metadata$grooming_direction <- NA
+      metadata$grooming_current_parter <- NA
+      metadata$grooming_withinsession_num <- 1
+      metadata$grooming_withinevent_num <- 1
+      
 
       metadata$current_foc_session_id <- NA
-      paths_sessions$current_foc_tab <- NA
-      paths_sessions$current_foc_nn <- NA
-      paths_sessions$current_foc_groom <- NA
-      paths_sessions$current_foc_aggr <- NA
+      metadata$active_foc_tab <- NA
+      metadata$active_foc_nn <- NA
+      metadata$active_foc_groom <- NA
+      metadata$active_foc_aggr <- NA
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
       output$metadata <- renderPrint(isolate(unlist(reactiveValuesToList(metadata))))
+      write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
     }
-
-
   })
 
 
@@ -665,16 +692,27 @@ server <- function(input, output, session) {
     metadata$group <- input$group
 
     # check whether data directory is there, and if not and required, create it
-    paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
-    paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
-    if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
-    # path names to daily data files
+    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
+    metadata$day_dir <- normalizePath(file.path(metadata$data_root_dir, 
+                                                paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
     filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
-    paths_day$daily_census <- file.path(paths_day$dirpath, paste0(filename_root, "_census.csv"))
-    paths_day$adlib_aggr <- file.path(paths_day$dirpath, paste0(filename_root, "_aggr.csv"))
-    paths_day$sessions_log <- file.path(paths_day$dirpath, paste0(filename_root, "_log.csv"))
-    paths_day$day_meta <- file.path(paths_day$dirpath, paste0(filename_root, "_meta.csv"))
-    output$info_paths_day <- renderPrint(isolate(reactiveValuesToList(paths_day))) # diagnostics/info
+    metadata$daily_census <- file.path(metadata$day_dir, paste0(filename_root, "_census.csv"))
+    metadata$adlib_aggr <- file.path(metadata$day_dir, paste0(filename_root, "_aggr.csv"))
+    metadata$sessions_log <- file.path(metadata$day_dir, paste0(filename_root, "_log.csv"))
+    metadata$day_meta <- file.path(metadata$day_dir, paste0(filename_root, "_meta.csv"))
+    if (!dir.exists(metadata$day_dir)) dir.create(metadata$day_dir)
+    
+    
+    # paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
+    # paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
+    # if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
+    # path names to daily data files
+    # filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
+    # paths_day$daily_census <- file.path(paths_day$dirpath, paste0(filename_root, "_census.csv"))
+    # paths_day$adlib_aggr <- file.path(paths_day$dirpath, paste0(filename_root, "_aggr.csv"))
+    # paths_day$sessions_log <- file.path(paths_day$dirpath, paste0(filename_root, "_log.csv"))
+    # paths_day$day_meta <- file.path(paths_day$dirpath, paste0(filename_root, "_meta.csv"))
+    # output$info_paths_day <- renderPrint(isolate(reactiveValuesToList(paths_day))) # diagnostics/info
 
     # initiate census table
     census$census <- id_table_initiate(all_individuals, group = metadata$group, include_nn_ids = FALSE)
@@ -688,9 +726,10 @@ server <- function(input, output, session) {
     removeModal()
 
     # write files
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = paths_day$day_meta, row.names = TRUE, quote = FALSE)
-    write.table(census$census, file = paths_day$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-
+    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
+    write.table(census$census, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
   })
 
 
@@ -713,7 +752,7 @@ server <- function(input, output, session) {
     # print(paste("nrow presence:", nrow(xxx), "\n"))
     if (!is.null(census$census) & metadata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table)
-      write.table(xxx, file = paths_day$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      write.table(xxx, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
       # update nn table if necessary
       nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = xxx)
     }
@@ -746,7 +785,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$adlib_aggression, {
     adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input)
-    write.csv(adlib_agg$dyadic, file = paths_day$adlib_aggr, quote = FALSE, row.names = FALSE)
+    write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
     removeModal()
   })
 
@@ -768,6 +807,12 @@ server <- function(input, output, session) {
       fluidRow(
         column(5, htmlOutput("metadata_info_out3"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px"), 
         column(5, htmlOutput("metadata_info_out4"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px")
+      ),
+      fluidRow(
+        column(11, htmlOutput("metadata_info_out5"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
+      ),
+      fluidRow(
+        column(11, htmlOutput("metadata_info_out6"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
       )
       
     ))
@@ -775,6 +820,8 @@ server <- function(input, output, session) {
     output$metadata_info_out2 <- renderUI(display_meta(reactiveValuesToList(metadata), 2))
     output$metadata_info_out3 <- renderUI(display_meta(reactiveValuesToList(metadata), 3))
     output$metadata_info_out4 <- renderUI(display_meta(reactiveValuesToList(metadata), 4))
+    output$metadata_info_out5 <- renderUI(display_meta(reactiveValuesToList(metadata), 5))
+    output$metadata_info_out6 <- renderUI(display_meta(reactiveValuesToList(metadata), 6))
   })
   
   # simple debuggging/diagnostics elements
@@ -783,7 +830,7 @@ server <- function(input, output, session) {
   output$current_wd <- renderPrint(getwd())
 
   observeEvent(input$open_data_dir_abtn, {
-    if (dir.exists(paths_day$data_root_dir)) system2("open", args = shQuote(paths_day$data_root_dir))
+    if (dir.exists(metadata$data_root_dir)) system2("open", args = shQuote(metadata$data_root_dir))
   })
 }
 

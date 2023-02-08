@@ -1,15 +1,21 @@
-"2022-12-14_census_joan.csv"
-# elements
-# [1] "2023-01-14" "ap"         "joan"       "1"
-
-
-
 # day_folder="2023-01-16_jeanne"
-# # basefolder = "www2"
+# basefolder = "www"
+# basefolder = "www/2023-02-07_joan"
 # basefolder = normalizePath("~/Desktop/data_collector_data")
 
 reload_list_days <- function(basefolder) {
-  data.frame(day_folder_display = list.files(basefolder), day_folder_path = list.files(basefolder, full.names = TRUE))
+  x <- data.frame(day_folder_display = list.files(basefolder), day_folder_path = list.files(basefolder, full.names = TRUE))
+  x$empty <- sapply(x$day_folder_path, function(X)length(list.files(X, pattern = ".csv")) == 0)
+  x
+}
+
+make_file_paths <- function(basefolder, metadata) {
+  m <- reactiveValuesToList(metadata)
+  out <- list()
+  out$daily_census <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_census.csv"))
+  out$sessions_log <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_log.csv"))
+  out$adlib_aggr <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_aggr.csv"))
+  out
 }
 
 reload_day_prep <- function(day_folder, basefolder = "www") {
@@ -88,8 +94,8 @@ read_meta_2 <- function(folder, paths_day) {
   metadata$focal_duration <- as.numeric(x["focal_duration", 1])
   metadata$focal_id <- x["focal_id", 1]
   metadata$focal_start <- x["focal_start", 1]
-  metadata$focal_start_hour <- x["focal_start_hour", 1]
-  metadata$focal_start_minute <- x["focal_start_minute", 1]
+  metadata$focal_start_hour <- as.numeric(x["focal_start_hour", 1])
+  metadata$focal_start_minute <- as.numeric(x["focal_start_minute", 1])
   metadata$session_is_active <- as.logical(x["session_is_active", 1])
   metadata$current_foc_session_id <- x["current_foc_session_id", 1]
   # progress within the current focal session

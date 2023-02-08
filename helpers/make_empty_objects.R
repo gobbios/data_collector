@@ -1,15 +1,20 @@
 # functions to generate empty tables and objects
 
 # tracks focal sessions within a day
-# reactive target: daily_sessions$sessions_over_day
 empty_log <- function() {
   data.frame(session_id = character(0),
              session_created = character(0),
-             filename = character(0),
              focal_id = character(0),
              focal_counter = integer(0),
+             foc_tab = character(0),
+             foc_nn = character(0),
+             foc_groom = character(0),
+             foc_aggr = character(0),
              stringsAsFactors = FALSE)
 }
+
+
+
 
 # metadata to recover/reload days
 # reactive target: 'metadata'
@@ -19,6 +24,18 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         group = NULL,
                         get_started = FALSE,
                         focal_sessions_so_far = 0,
+                        # paths to active focal session files, if any
+                        active_foc_tab = NA, 
+                        active_foc_nn = NA, 
+                        active_foc_groom = NA, 
+                        active_foc_aggr = NA,
+                        # paths to folders/directories
+                        data_root_dir = NULL,
+                        day_dir = NULL,
+                        daily_census = NULL,
+                        adlib_aggr = NULL,
+                        sessions_log = NULL,
+                        day_meta = NULL,
                         # current focal session
                         focal_duration = NA, 
                         focal_id = NA,

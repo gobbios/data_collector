@@ -1,3 +1,24 @@
+
+reload_day_dialog_box <- function() {
+  showModal(modalDialog(title = "so you want to reload or continue?",
+                        span("please provide the necessary information"),
+                        hr(),
+                        selectInput("available_days_selector_new", label = "select day and observer", choices = NULL),
+                        HTML("<p>if this list is empty: there are no days available</p>"),
+                        actionButton("copy_examples_abtn", "make examples available"),
+                        footer = tagList(
+                          # modalButton("Cancel"),
+                          actionButton("reload_day_doit_abtn", "reload or continue"),
+                          actionButton("reload_day_cancel_abtn", "cancel", icon = icon("ban")),
+                          
+                          # actionButton("startnewday_ok_abtn", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
+                          HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
+                        )
+  ))
+}
+
+
+
 # day_folder="2023-01-16_jeanne"
 # basefolder = "www"
 # basefolder = "www/2023-02-07_joan"

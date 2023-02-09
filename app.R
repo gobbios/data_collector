@@ -115,6 +115,7 @@ ui <- fluidPage(
 
              tabPanel("review data",
                       span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
+                      span(HTML("<p>Here you can review focal sessions that were done on this day AND which were properly finished. If there isn't any finished session yet, only placeholders are displayed.</p>")),
                       selectInput("session_for_review", label = "select session", choices = c("one", "or", "the", "other")),
                       navlistPanel(widths = c(2, 10),
                                    tabPanel("focal (point samples)",
@@ -135,8 +136,6 @@ ui <- fluidPage(
                       tableOutput("log"),
                       h4("current working directory"),
                       verbatimTextOutput("current_wd"),
-                      h4("current content of meta data"),
-                      verbatimTextOutput("metadata"),
                       h4("R session info"),
                       verbatimTextOutput("rsession_info")
              ),
@@ -148,19 +147,7 @@ ui <- fluidPage(
                       h4("current focal table in static form"),
                       htmlOutput("debug_foctab_progress"),
                       tableOutput("static_foctab")
-             ),
-             tabPanel("reload",
-                      selectInput("available_days_selector", label = "select day and observer", choices = NULL),
-                      actionButton("show_available_days", "show available days"),
-                      actionButton("reload_selected_day", "reload selected day"),
-                      navlistPanel(widths = c(2, 10),
-                                   tabPanel("focal (point samples)",
-                                            tableOutput("reload_days_available"),
-                                            tableOutput("reload_sessions_available")
-                                            )
-                      )
              )
-
   )
 )
 
@@ -204,19 +191,21 @@ server <- function(input, output, session) {
   nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
 
   # reload data -------------------------
-  observeEvent(input$show_available_days, {
-    # available days
+  observeEvent(input$reload_day_dialog_btn, {
+    reload_day_dialog_box()
+    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
     ad <- reload_list_days(metadata$data_root_dir)
-    updateSelectInput(session, inputId = "available_days_selector", choices = ad$day_folder_display[!ad$empty])
-    output$reload_days_available <- renderTable(ad)
+    updateSelectInput(session, inputId = "available_days_selector_new", choices = ad$day_folder_display[!ad$empty])
   })
-  observeEvent(input$reload_selected_day, {
-    # print(input$available_days_selector)
-    
-    if (!is.null(input$available_days_selector) & input$available_days_selector != "") {
+  observeEvent(input$reload_day_cancel_abtn, {
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  })
+  observeEvent(input$reload_day_doit_abtn, {
+    removeModal()
+    if (!is.null(input$available_days_selector_new) & input$available_days_selector_new != "") {
       # tried to outsource this into a function, but not yet successfully (read_meta_2)
       
-      xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector), full.names = TRUE, pattern = "meta.csv$")
+      xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector_new), full.names = TRUE, pattern = "meta.csv$")
       print(xpaths)
       if (length(xpaths) != 1) stop("didn't find exactly one ")
       x <- read.csv(xpaths, row.names = 1)
@@ -287,13 +276,33 @@ server <- function(input, output, session) {
         output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
                                                                                  focal_id = metadata$focal_id,
                                                                                  current_grooming_parter = metadata$grooming_current_parter))
-        
       }
+      # home panel info
+      output$dategroupobs <- renderText({
+        paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
+              "<p>selected date:<b>", as.character(metadata$date), "</b></p>", "<hr>",
+              "<p>selected observer:<b>", as.character(metadata$observer), "</b></p>")
+      })
       
     }
   })
-
-
+  
+  observeEvent(input$copy_examples_abtn, {
+    x <- list.files("examples_sessions", full.names = TRUE, include.dirs = TRUE)
+    print(basename(x))
+    for (i in 1:length(x)) {
+      if (dir.exists(file.path("www", basename(x)[i]))) {
+        print(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
+        file.remove(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
+      } 
+      dir.create(file.path("www", basename(x)[i]), showWarnings = FALSE)
+      y <- list.files(x[i], full.names = TRUE)
+      for (k in y) file.copy(from = k, to = file.path("www", basename(x)[i], basename(k)), overwrite = TRUE)
+    }
+    ad <- reload_list_days(metadata$data_root_dir)
+    updateSelectInput(session, inputId = "available_days_selector_new", choices = ad$day_folder_display[!ad$empty])
+  })
+  
   # reviewing of existing data ---------------------------
   output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
   output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata))
@@ -517,7 +526,6 @@ server <- function(input, output, session) {
     write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
 
-    output$log <- renderTable({sessions_log$log})
     removeModal()
 
     # start new grooming table (reset old one)
@@ -526,7 +534,7 @@ server <- function(input, output, session) {
     metadata$grooming_current_parter <- NA
     metadata$grooming_withinsession_num <- 1
     metadata$grooming_withinevent_num <- 1
-    grooming$grooming = empty_grooming()
+    grooming$grooming <- empty_grooming()
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
     
     # start new focal aggression (reset old one)
@@ -681,14 +689,12 @@ server <- function(input, output, session) {
       metadata$grooming_withinsession_num <- 1
       metadata$grooming_withinevent_num <- 1
       
-
       metadata$current_foc_session_id <- NA
       metadata$active_foc_tab <- NA
       metadata$active_foc_nn <- NA
       metadata$active_foc_groom <- NA
       metadata$active_foc_aggr <- NA
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
-      output$metadata <- renderPrint(isolate(unlist(reactiveValuesToList(metadata))))
       write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
     }
   })
@@ -744,6 +750,9 @@ server <- function(input, output, session) {
     write.table(census$census, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
+    
+    output$log <- renderTable(sessions_log$log[, 1:4])
+    
   })
 
 

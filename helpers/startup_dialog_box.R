@@ -9,6 +9,7 @@ startup_dialog_box <- function(pot_observers, pot_groups) {
                         checkboxInput("desktopdir", "use 'Desktop/data_collector_data' as data directory", value = FALSE),
                         footer = tagList(
                           # modalButton("Cancel"),
+                          actionButton("reload_day_dialog_btn", "reload or continue"),
                           actionButton("startnewday_ok_abtn", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
                           HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
                         )

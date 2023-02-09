@@ -147,12 +147,13 @@ ui <- fluidPage(
                       h4("current focal table in static form"),
                       htmlOutput("debug_foctab_progress"),
                       tableOutput("static_foctab")
-             )
+             ),
+             tabPanel("read me", includeMarkdown("manual.Rmd")) # withMathJax(includeMarkdown("manual.Rmd"))
   )
 )
 
-
 server <- function(input, output, session) {
+  
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
   output$panelStatus <- reactive({
     metadata$grooming_in_progress

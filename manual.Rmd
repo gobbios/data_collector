@@ -1,0 +1,15 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-02-09"
+---
+
+# Start up
+
+Once the app is started, you will see a screen where you can either start a new day (with setting observer, date and group), or you can load some existing data. 
+The latter is probably only relevant if the app (or the browser) crashed or accidentally terminated and you want to resume a session.
+
+If you do indeed want to resume a session you can choose from the dropdown menu, or if you want to play with the feature, you can simply copy two example days which then illustrate how it works.
+One of the two examples was broken off during an ongoing focal session (in fact during a grooming bout). 
+The other example has two complete (finished) sessions.
+

@@ -43,40 +43,34 @@ reload_day_prep <- function(day_folder, basefolder = "www") {
   out
 }
 
-# fps$current_foc_tab <- file.path(fps$dirpath, paste0(session_id, "_foctab.csv"))
-# fps$current_foc_nn <- file.path(fps$dirpath, paste0(session_id, "_nn.csv"))
-# fps$current_foc_groom <- file.path(fps$dirpath, paste0(session_id, "_groom.csv"))
-# fps$current_foc_aggr <- file.path(fps$dirpath, paste0(session_id, "_aggr.csv"))
-# fps$current_foc_session_id <- session_id
-
 # folder <- "~/Desktop/data_collector_data/2023-01-16_jeanne"
-reload_all_focal_sessions <- function(folder) {
-  xpaths <- list.files(folder, full.names = TRUE, pattern = "foctab.csv$")
-  out <- lapply(xpaths, function(x) {
-    y <- paste(unlist(strsplit(basename(x), "_"))[1:4], collapse = "_")
-    data.frame(session_id = y, read.csv(x))
-  })
-  do.call("rbind", out)
-}
+# reload_all_focal_sessions <- function(folder) {
+#   xpaths <- list.files(folder, full.names = TRUE, pattern = "foctab.csv$")
+#   out <- lapply(xpaths, function(x) {
+#     y <- paste(unlist(strsplit(basename(x), "_"))[1:4], collapse = "_")
+#     data.frame(session_id = y, read.csv(x))
+#   })
+#   do.call("rbind", out)
+# }
 
 # folder <- "www/2023-01-19_jeanne"
-read_meta <- function(folder) {
-  xpaths <- list.files(folder, full.names = TRUE, pattern = "meta.csv$")
-  x <- read.csv(xpaths, row.names = 1)
-  out <- list(group = x["group", 1],
-              date = x["date", 1],
-              observer = x["observer", 1],
-              focal_sessions_so_far = as.numeric(x["focal_sessions_so_far", 1]),
-              focal_duration = as.numeric(x["focal_duration", 1]),
-              focal_start = as.character(x["focal_start", 1]),
-              focal_id = x["focal_id", 1],
-              get_started = as.logical(x["get_started", 1]),
-              session_is_active = as.logical(x["session_is_active", 1])
-              )
-  # checking
-  # y <- names(isolate(reactiveValuesToList(empty_metadata())))
-  out
-}
+# read_meta <- function(folder) {
+#   xpaths <- list.files(folder, full.names = TRUE, pattern = "meta.csv$")
+#   x <- read.csv(xpaths, row.names = 1)
+#   out <- list(group = x["group", 1],
+#               date = x["date", 1],
+#               observer = x["observer", 1],
+#               focal_sessions_so_far = as.numeric(x["focal_sessions_so_far", 1]),
+#               focal_duration = as.numeric(x["focal_duration", 1]),
+#               focal_start = as.character(x["focal_start", 1]),
+#               focal_id = x["focal_id", 1],
+#               get_started = as.logical(x["get_started", 1]),
+#               session_is_active = as.logical(x["session_is_active", 1])
+#               )
+#   # checking
+#   # y <- names(isolate(reactiveValuesToList(empty_metadata())))
+#   out
+# }
 
 read_meta_2 <- function(folder, paths_day) {
   xpaths <- list.files(file.path(paths_day, folder), full.names = TRUE, pattern = "meta.csv$")

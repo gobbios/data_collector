@@ -34,7 +34,7 @@ all_individuals$comment <- ""
 
 
 # list with observers (to be outsourced to csv file eventually)
-all_observers <- c("findus", "maria", "carel", "jeanne", "robert", "joan", "julia")
+all_observers <- c("petterson", "maria", "carel", "jeanne", "robert", "joan", "julia")
 # list with all activity codes for point sampling
 activity_codes <- c("r", "fe", "gr", "oos")
 
@@ -277,8 +277,18 @@ server <- function(input, output, session) {
       sessions_log$log <- read.csv(file = metadata$sessions_log)
       adlib_agg$dyadic <- read.csv(file = metadata$adlib_aggr)
       
+      # reviewing pane
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
       updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
+      
+      # grooming status
+      if (metadata$grooming_in_progress) {
+        # progress update
+        output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
+                                                                                 focal_id = metadata$focal_id,
+                                                                                 current_grooming_parter = metadata$grooming_current_parter))
+        
+      }
       
     }
   })
@@ -401,6 +411,7 @@ server <- function(input, output, session) {
                                                                   current_grooming_parter = metadata$grooming_current_parter))
 
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
   })
 
   observeEvent(input$change_grooming, {
@@ -415,6 +426,7 @@ server <- function(input, output, session) {
                                                                              focal_id = metadata$focal_id,
                                                                              current_grooming_parter = metadata$grooming_current_parter))
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
   })
 
   observeEvent(input$stop_grooming, {
@@ -427,6 +439,8 @@ server <- function(input, output, session) {
     metadata$grooming_withinevent_num <- 1
     output$debugging_groom <- renderTable(grooming$grooming)
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
+    
   })
 
   # other focal session aggression -------------------

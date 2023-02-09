@@ -76,7 +76,7 @@ empty_adlib_aggr <- function() {
   # id1
   # id2
   # intensity
-  data.frame("time_stamp" = character(0), "id1" = character(0), "id2" = character(0), "highest_intensity" = character(0))
+  data.frame("sample" = integer(0), "time_stamp" = character(0), "id1" = character(0), "id2" = character(0), "highest_intensity" = character(0))
 }
 
 # focal aggression

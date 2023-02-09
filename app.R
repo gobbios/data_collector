@@ -125,7 +125,11 @@ ui <- fluidPage(
                                    tabPanel("grooming",
                                             rHandsontableOutput("rev_groom")),
                                    tabPanel("neighbors",
-                                            rHandsontableOutput("rev_nn"))
+                                            rHandsontableOutput("rev_nn")),
+                                   tabPanel("adlib aggression",
+                                            rHandsontableOutput("rev_adlib_aggression")),
+                                   
+                                   
                       )
              ),
 
@@ -309,8 +313,9 @@ server <- function(input, output, session) {
   output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata))
   output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata))
   output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata))
-
-
+  observeEvent(adlib_agg$dyadic, output$rev_adlib_aggression <- renderRHandsontable(review_table_adlib_agg(metadata = metadata)))
+  
+  
 
 
   # nearest neighbors -------------------------

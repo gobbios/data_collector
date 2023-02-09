@@ -15,6 +15,7 @@ adlib_aggression_dyadic_dialog <- function() {
 adlib_aggression_dyadic_update <- function(reactive_xdata, input_list) {
   newrow <- nrow(reactive_xdata) + 1
   reactive_xdata[newrow, ] <- NA
+  reactive_xdata$sample[newrow] <- newrow
   reactive_xdata$time_stamp[newrow] <- input_list$adlib_aggression_dyadic_datetime
   reactive_xdata$id1[newrow] <- input_list$adlib_aggression_dyadic_id1
   reactive_xdata$id2[newrow] <- input_list$adlib_aggression_dyadic_id2

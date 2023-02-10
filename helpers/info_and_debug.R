@@ -7,6 +7,7 @@ display_meta <- function(x, xdisp) {
   # display 4: grooming monitor
   # display 5: folders/directories to daily files
   # display 6: paths to files re active focal session (if any)
+  # display 7: monitoring which row if any is supposed to be edited in reviewing pane tables
   
   # check whether all elements in meta data are covered (fail-safe if something new is added)
   xnames1 <- c("date", "observer", "group", "get_started", "focal_sessions_so_far")
@@ -15,8 +16,9 @@ display_meta <- function(x, xdisp) {
   xnames4 <- c("grooming_in_progress", "grooming_direction", "grooming_current_parter", "grooming_withinsession_num", "grooming_withinevent_num")
   xnames5 <- c("day_dir", "data_root_dir", "daily_census", "adlib_aggr", "sessions_log", "day_meta")
   xnames6 <- c("active_foc_tab", "active_foc_nn", "active_foc_groom", "active_foc_aggr")
+  xnames7 <- c("edit_adlib_aggr")
   
-  if(!all(names(x) %in% c(xnames1, xnames2, xnames3, xnames4, xnames5, xnames6))) {
+  if(!all(names(x) %in% c(xnames1, xnames2, xnames3, xnames4, xnames5, xnames6, xnames7))) {
     print(names(x))
     warning("there seems to be meta data that is ignored for *display* of meta data")
   }
@@ -38,6 +40,9 @@ display_meta <- function(x, xdisp) {
   }
   if (xdisp == 6) {
     out <- paste(paste0("<span style='color:grey'>", xnames6, ":</span> ", x[xnames6]), "<br>")
+  }
+  if (xdisp == 7) {
+    out <- paste(paste0("<span style='color:grey'>", xnames7, ":</span> ", x[xnames7]), "<br>")
   }
   
   HTML(out)

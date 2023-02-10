@@ -158,6 +158,8 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  
+  
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
   output$panelStatus <- reactive({
     metadata$grooming_in_progress
@@ -256,6 +258,8 @@ server <- function(input, output, session) {
       metadata$grooming_current_parter <- x["grooming_current_parter", 1]
       metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
       metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
+      # editing monitor
+      metadata$edit_adlib_aggr <- as.numeric(x["edit_adlib_aggr", 1])
       
       # update reactive objects
       # if there is an active focal session
@@ -313,7 +317,6 @@ server <- function(input, output, session) {
   output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata))
   output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata))
   output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata))
-  observeEvent(adlib_agg$dyadic, output$rev_adlib_aggression <- renderRHandsontable(review_table_adlib_agg(metadata = metadata)))
   
   
 
@@ -808,16 +811,44 @@ server <- function(input, output, session) {
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
     }
   })
-
+  
+  
+  # adlib aggression -----------------
+  # data entry dialog
   observeEvent(input$adlib_aggression_dialog, {
     showModal(adlib_aggression_dyadic_dialog()) # submit button in dialog: 'adlib_aggression'
   })
+  # save and write input
   observeEvent(input$adlib_aggression, {
-    adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input)
+    adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input, what_row = metadata$edit_adlib_aggr)
     write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
     removeModal()
+    metadata$edit_adlib_aggr <- NA
   })
-
+  # display table for review
+  observeEvent(adlib_agg$dyadic, output$rev_adlib_aggression <- renderRHandsontable(review_table_adlib_agg(metadata = metadata)))
+  # edit table in reviewing pane
+  observeEvent(input$rev_adlib_aggression_select$select$c, {
+    # print(input$rev_adlib_aggression_select$select$c)
+    which_col <- which(colnames(hot_to_r(input$rev_adlib_aggression)) == "action")
+    x <- input$rev_adlib_aggression_select$select$c
+    # print(which_col)
+    if (!is.na(x)) {
+      if (x == which_col) {
+        metadata$edit_adlib_aggr <- input$rev_adlib_aggression_select$select$r
+        showModal(adlib_aggression_dyadic_dialog())
+        updateTextInput(inputId = "adlib_aggression_dyadic_id1", value = adlib_agg$dyadic$id1[metadata$edit_adlib_aggr])
+        updateTextInput(inputId = "adlib_aggression_dyadic_id2", value = adlib_agg$dyadic$id2[metadata$edit_adlib_aggr])
+        updateTextInput(inputId = "adlib_aggression_dyadic_datetime", value = adlib_agg$dyadic$time_stamp[metadata$edit_adlib_aggr])
+        updateTextInput(inputId = "adlib_aggression_dyadic_intensity", value = adlib_agg$dyadic$highest_intensity[metadata$edit_adlib_aggr])
+        x <- NA
+      }
+    }
+  })
+  
+  
+  
+  # navigation
   observeEvent(input$go_to_census_btn, {
     updateTabsetPanel(session, inputId = "nav_home", selected = "census") # shift focus to census tab
   })
@@ -842,6 +873,9 @@ server <- function(input, output, session) {
       ),
       fluidRow(
         column(11, htmlOutput("metadata_info_out6"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
+      ),
+      fluidRow(
+        column(11, htmlOutput("metadata_info_out7"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
       )
       
     ))
@@ -851,6 +885,7 @@ server <- function(input, output, session) {
     output$metadata_info_out4 <- renderUI(display_meta(reactiveValuesToList(metadata), 4))
     output$metadata_info_out5 <- renderUI(display_meta(reactiveValuesToList(metadata), 5))
     output$metadata_info_out6 <- renderUI(display_meta(reactiveValuesToList(metadata), 6))
+    output$metadata_info_out7 <- renderUI(display_meta(reactiveValuesToList(metadata), 7))
   })
   
   # simple debuggging/diagnostics elements

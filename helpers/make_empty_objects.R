@@ -56,7 +56,9 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         grooming_direction = NA,
                         grooming_current_parter = NA,
                         grooming_withinsession_num = 1,
-                        grooming_withinevent_num = 1
+                        grooming_withinevent_num = 1,
+                        # editing monitor for reviewing pane
+                        edit_adlib_aggr = NA
   )
   if (as_pure_list) out <- isolate(reactiveValuesToList(out))
   out

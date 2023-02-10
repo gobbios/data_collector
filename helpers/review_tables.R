@@ -2,8 +2,9 @@ review_table_adlib_agg <- function(metadata) {
   fp <- file.path(metadata$adlib_aggr)
   if (file.exists(fp)) {
     outtab <- read.csv(fp)
+    
     # print(fp)
-    outtab$action <- "edit"
+    if (nrow(outtab) > 0) outtab$action <- "edit"
     outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500, readOnly = TRUE, selectCallback = TRUE)
     outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
     return(outtab)

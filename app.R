@@ -114,9 +114,10 @@ ui <- fluidPage(
              ),
 
              tabPanel("review data",
-                      span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
-                      span(HTML("<p>Here you can review focal sessions that were done on this day AND which were properly finished. If there isn't any finished session yet, only placeholders are displayed.</p>")),
-                      selectInput("session_for_review", label = "select session", choices = c("one", "or", "the", "other")),
+                      # span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
+                      span(HTML("<p>Here you can review focal sessions that were done on this day. If there is an active session it is selected by default. If there is no finished session, nothing is displayed.</p>")),
+                      span(HTML("<p>Also, here you can see and review adlib data (data collected outside a focal session, i.e. for now only 'adlib' aggression).</p>")),
+                      selectInput("session_for_review", label = "select session", choices = c("")),
                       navlistPanel(widths = c(2, 10),
                                    tabPanel("focal (point samples)",
                                             rHandsontableOutput("rev_focal_table")),
@@ -157,7 +158,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  
+  print(getwd())
   
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
@@ -277,7 +278,7 @@ server <- function(input, output, session) {
       
       # reviewing pane
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
-      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
+      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
       
       # grooming status
       if (metadata$grooming_in_progress) {
@@ -313,12 +314,10 @@ server <- function(input, output, session) {
   })
   
   # reviewing of existing data ---------------------------
-  output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
-  output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata))
-  output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata))
-  output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata))
-  
-  
+  observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata)))
+  observeEvent(focal_aggression_data$aggression, output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata)))
+  observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
+  observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
 
 
   # nearest neighbors -------------------------
@@ -560,6 +559,10 @@ server <- function(input, output, session) {
     write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
     write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
     
+    # reviewing pane
+    session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+    updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
+    
   })
   
   # start session: time display----------------
@@ -674,7 +677,7 @@ server <- function(input, output, session) {
 
       # update list for revisions
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
-      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display)
+      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
 
       # reset reactive values objects
       v$foctab = NULL # the actual data table
@@ -837,10 +840,13 @@ server <- function(input, output, session) {
       if (x == which_col) {
         metadata$edit_adlib_aggr <- input$rev_adlib_aggression_select$select$r
         showModal(adlib_aggression_dyadic_dialog())
-        updateTextInput(inputId = "adlib_aggression_dyadic_id1", value = adlib_agg$dyadic$id1[metadata$edit_adlib_aggr])
-        updateTextInput(inputId = "adlib_aggression_dyadic_id2", value = adlib_agg$dyadic$id2[metadata$edit_adlib_aggr])
-        updateTextInput(inputId = "adlib_aggression_dyadic_datetime", value = adlib_agg$dyadic$time_stamp[metadata$edit_adlib_aggr])
-        updateTextInput(inputId = "adlib_aggression_dyadic_intensity", value = adlib_agg$dyadic$highest_intensity[metadata$edit_adlib_aggr])
+        for (i in 1:nrow(input_tab_matching)) updateTextInput(inputId = unname(input_tab_matching[i, "inputname"]), 
+                                                              value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, input_tab_matching[i, "tabcol"]]))
+
+        # updateTextInput(inputId = "adlib_aggression_dyadic_id1", value = adlib_agg$dyadic$id1[metadata$edit_adlib_aggr])
+        # updateTextInput(inputId = "adlib_aggression_dyadic_id2", value = adlib_agg$dyadic$id2[metadata$edit_adlib_aggr])
+        # updateTextInput(inputId = "adlib_aggression_dyadic_datetime", value = adlib_agg$dyadic$time_stamp[metadata$edit_adlib_aggr])
+        # updateTextInput(inputId = "adlib_aggression_dyadic_intensity", value = adlib_agg$dyadic$highest_intensity[metadata$edit_adlib_aggr])
         x <- NA
       }
     }
@@ -848,13 +854,13 @@ server <- function(input, output, session) {
   
   
   
-  # navigation
+  # navigation ---------------------------
   observeEvent(input$go_to_census_btn, {
     updateTabsetPanel(session, inputId = "nav_home", selected = "census") # shift focus to census tab
   })
   
   # debugging and info ------------------------
-  
+  # display current metadata in popup
   observeEvent(input$show_metadata_abtn, {
     showModal(modalDialog(
       # title = "",

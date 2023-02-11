@@ -12,7 +12,7 @@ source("helpers/focal_aggression.R")
 source("helpers/focal_grooming.R")
 source("helpers/id_table.R")
 source("helpers/info_and_debug.R")
-
+source("helpers/metadata_reset_after_focal.R")
 
 source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
@@ -575,38 +575,15 @@ server <- function(input, output, session) {
     }
   })
   observeEvent(input$incr, {
-    h <- as.numeric(metadata$focal_start_hour)
-    m <- as.numeric(metadata$focal_start_minute)
-    if (is.na(m)) m <- curtime()[2]
-    if (is.na(h)) h <- curtime()[1]
-    if (m > 59 | m < 0) m <- curtime()[2]
-    if (h > 23 | h < 0) h <- curtime()[1]
-    
-    m <- m + 1
-    if (m == 60) {
-      m <- 0
-      h <- h + 1
-    }
-    metadata$focal_start_minute <- m
-    metadata$focal_start_hour <- h
+    x <- update_time_display(metadata, "up")
+    metadata$focal_start_minute <- x[2]
+    metadata$focal_start_hour <- x[1]
   })
   observeEvent(input$decr, {
-    h <- as.numeric(metadata$focal_start_hour)
-    m <- as.numeric(metadata$focal_start_minute)
-    if (is.na(m)) m <- curtime()[2]
-    if (is.na(h)) h <- curtime()[1]
-    if (m > 59 | m < 0) m <- curtime()[2]
-    if (h > 23 | h < 0) h <- curtime()[1]
-    
-    m <- m - 1
-    if (m == -1) {
-      m <- 59
-      h <- h - 1
-    }
-    metadata$focal_start_minute <- m
-    metadata$focal_start_hour <- h
+    x <- update_time_display(metadata, "down")
+    metadata$focal_start_minute <- x[2]
+    metadata$focal_start_hour <- x[1]
   })
-  
 
   remcols <- c("time_stamp", "sample")
   output$focal_table <- renderRHandsontable({
@@ -682,30 +659,35 @@ server <- function(input, output, session) {
       # reset reactive values objects
       v$foctab = NULL # the actual data table
       # and metadata (including file paths) pertaining to focal sessions
-      metadata$focal_id <- NA
-      metadata$current_foc_session_id <- NA
-      metadata$session_is_active <- FALSE
-      metadata$focal_start <- NA
-      metadata$focal_start_hour <- NA
-      metadata$focal_start_minute <- NA
       
-      metadata$progr_target <- NA
-      metadata$progr_table_lines <- NA
-      metadata$progr_na_vals <- NA
-      metadata$progr_oos <- NA
-      metadata$progr_act <- NA
-      metadata$nn_scan_no <- NA
-      metadata$grooming_in_progress <- FALSE
-      metadata$grooming_direction <- NA
-      metadata$grooming_current_parter <- NA
-      metadata$grooming_withinsession_num <- 1
-      metadata$grooming_withinevent_num <- 1
       
-      metadata$current_foc_session_id <- NA
-      metadata$active_foc_tab <- NA
-      metadata$active_foc_nn <- NA
-      metadata$active_foc_groom <- NA
-      metadata$active_foc_aggr <- NA
+      metadata <- metadata_reset_after_focal(metadata)
+      # metadata$focal_id <- NA
+      # metadata$current_foc_session_id <- NA
+      # metadata$session_is_active <- FALSE
+      # metadata$focal_start <- NA
+      # metadata$focal_start_hour <- NA
+      # metadata$focal_start_minute <- NA
+      
+      # metadata$progr_target <- NA
+      # metadata$progr_table_lines <- NA
+      # metadata$progr_na_vals <- NA
+      # metadata$progr_oos <- NA
+      # metadata$progr_act <- NA
+      # metadata$nn_scan_no <- NA
+      # metadata$grooming_in_progress <- FALSE
+      # metadata$grooming_direction <- NA
+      # metadata$grooming_current_parter <- NA
+      # metadata$grooming_withinsession_num <- 1
+      # metadata$grooming_withinevent_num <- 1
+      # 
+      # metadata$current_foc_session_id <- NA
+      # metadata$active_foc_tab <- NA
+      # metadata$active_foc_nn <- NA
+      # metadata$active_foc_groom <- NA
+      # metadata$active_foc_aggr <- NA
+      
+      
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
       write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
     }
@@ -836,17 +818,12 @@ server <- function(input, output, session) {
     which_col <- which(colnames(hot_to_r(input$rev_adlib_aggression)) == "action")
     x <- input$rev_adlib_aggression_select$select$c
     # print(which_col)
-    if (!is.na(x)) {
+    if (!is.na(x) & length(which_col) == 1) {
       if (x == which_col) {
         metadata$edit_adlib_aggr <- input$rev_adlib_aggression_select$select$r
         showModal(adlib_aggression_dyadic_dialog())
         for (i in 1:nrow(input_tab_matching)) updateTextInput(inputId = unname(input_tab_matching[i, "inputname"]), 
                                                               value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, input_tab_matching[i, "tabcol"]]))
-
-        # updateTextInput(inputId = "adlib_aggression_dyadic_id1", value = adlib_agg$dyadic$id1[metadata$edit_adlib_aggr])
-        # updateTextInput(inputId = "adlib_aggression_dyadic_id2", value = adlib_agg$dyadic$id2[metadata$edit_adlib_aggr])
-        # updateTextInput(inputId = "adlib_aggression_dyadic_datetime", value = adlib_agg$dyadic$time_stamp[metadata$edit_adlib_aggr])
-        # updateTextInput(inputId = "adlib_aggression_dyadic_intensity", value = adlib_agg$dyadic$highest_intensity[metadata$edit_adlib_aggr])
         x <- NA
       }
     }

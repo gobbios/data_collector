@@ -2,6 +2,7 @@
 empty_grooming <- function() {
   data.frame(time_stamp = character(), # as.POSIXlt(strptime("2000-02-29", format = "%F")),
              session = character(),
+             event_type = character(),
              withinsession_num = integer(),
              withinevent_num = integer(),
              focal = character(),
@@ -19,6 +20,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
   if (event == "start") {
     newrow <- nrow(grooming) + 1
     grooming[newrow, ] <- NA
+    grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
     grooming$time_stamp[newrow] <- as.character(Sys.time())
     grooming$session[newrow] <- metadata_list$current_foc_session_id
@@ -34,6 +36,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
   if (event == "change") {
     newrow <- nrow(grooming) + 1
     grooming[newrow, ] <- NA
+    grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
     grooming$time_stamp[newrow] <- as.character(Sys.time())
     grooming$session[newrow] <- metadata_list$current_foc_session_id
@@ -49,6 +52,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
   if (event == "end") {
     newrow <- nrow(grooming) + 1
     grooming[newrow, ] <- NA
+    grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
     grooming$time_stamp[newrow] <- as.character(Sys.time())
     grooming$session[newrow] <- metadata_list$current_foc_session_id

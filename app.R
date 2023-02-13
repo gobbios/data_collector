@@ -102,6 +102,8 @@ ui <- fluidPage(
                       rHandsontableOutput("census_table"),
                       actionButton("addnewrowtocensus", "add new row"),
                       actionButton("addgrouptocensus", "additional group"),
+                      hr(),
+                      HTML("<p>if you added an addtional group to conduct a census on, it will appear below</p>"),
                       rHandsontableOutput("census_table_additional_group")
              ),
 
@@ -196,6 +198,7 @@ server <- function(input, output, session) {
 
   # census
   census <- reactiveValues(census = NULL)
+  census_additional <- reactiveValues(census = NULL) # for additional groups
   # NN (new style)
   nn_data <- reactiveValues(nn_data = NULL)
   nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
@@ -214,6 +217,7 @@ server <- function(input, output, session) {
     removeModal()
     if (!is.null(input$available_days_selector_new) & input$available_days_selector_new != "") {
       # tried to outsource this into a function, but not yet successfully (read_meta_2)
+      # maybe works with a loop?
       
       xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector_new), full.names = TRUE, pattern = "meta.csv$")
       print(xpaths)
@@ -224,6 +228,7 @@ server <- function(input, output, session) {
       metadata$data_root_dir <- x["data_root_dir", 1]
       metadata$day_dir <- x["day_dir", 1]
       metadata$daily_census <- x["daily_census", 1]
+      metadata$daily_census_additional <- x["daily_census_additional", 1]
       metadata$adlib_aggr <- x["adlib_aggr", 1]
       metadata$sessions_log <- x["sessions_log", 1]
       metadata$day_meta <- x["day_meta", 1]
@@ -263,6 +268,8 @@ server <- function(input, output, session) {
       metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
       # editing monitor
       metadata$edit_adlib_aggr <- as.numeric(x["edit_adlib_aggr", 1])
+      metadata$edit_focal_grooming <- as.numeric(x["edit_focal_grooming", 1])
+      metadata$edit_focal_aggression <- as.numeric(x["edit_focal_aggression", 1])
       
       # update reactive objects
       # if there is an active focal session
@@ -275,6 +282,7 @@ server <- function(input, output, session) {
       }
       # and daily stuff that should be there regardless
       census$census <- read.csv(file = metadata$daily_census)
+      census_additional$census <- read.csv(file = metadata$daily_census_additional)
       sessions_log$log <- read.csv(file = metadata$sessions_log)
       adlib_agg$dyadic <- read.csv(file = metadata$adlib_aggr)
       
@@ -741,6 +749,7 @@ server <- function(input, output, session) {
                                                 paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
     filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
     metadata$daily_census <- file.path(metadata$day_dir, paste0(filename_root, "_census.csv"))
+    metadata$daily_census_additional <- file.path(metadata$day_dir, paste0(filename_root, "_census_additional.csv"))
     metadata$adlib_aggr <- file.path(metadata$day_dir, paste0(filename_root, "_aggr.csv"))
     metadata$sessions_log <- file.path(metadata$day_dir, paste0(filename_root, "_log.csv"))
     metadata$day_meta <- file.path(metadata$day_dir, paste0(filename_root, "_meta.csv"))
@@ -758,9 +767,10 @@ server <- function(input, output, session) {
     # paths_day$day_meta <- file.path(paths_day$dirpath, paste0(filename_root, "_meta.csv"))
     # output$info_paths_day <- renderPrint(isolate(reactiveValuesToList(paths_day))) # diagnostics/info
 
-    # initiate census table
+    # initiate census tables
     census$census <- id_table_initiate(all_individuals, group = metadata$group, include_nn_ids = FALSE)
-
+    census_additional$census <- census$census[0, ] # blank
+    
     metadata$get_started <- TRUE
     output$dategroupobs <- renderText({
       paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
@@ -772,6 +782,7 @@ server <- function(input, output, session) {
     # write files
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
     write.table(census$census, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    write.table(census_additional$census, file = metadata$daily_census_additional, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
     
@@ -780,7 +791,7 @@ server <- function(input, output, session) {
   })
 
 
-  # census related ---------------------
+  # census ---------------------
   observeEvent(input$addgrouptocensus, {
     if (isTRUE(metadata$session_is_active)) {
       showModal(modalDialog(
@@ -799,8 +810,8 @@ server <- function(input, output, session) {
       xxx <- xxx[!xxx$id %in% c("new1", "new2"), ]
       cat_table(xxx, head = FALSE)
       # census$census <- rbind(census$census, all_individuals[all_individuals$group == input$add_group_selected, ])
-      census$census <- rbind(census$census, xxx)
-      
+      # census$census <- rbind(census$census, xxx)
+      census_additional$census <- xxx
     }
     
     removeModal()
@@ -817,8 +828,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$addnewrowtocensus, {
     if (!is.null(census$census) & metadata$get_started == TRUE) {
-      census$census <- hot_to_r(input$census_table)
-      census$census <- rbind(census$census, NA)
+      # census$census <- hot_to_r(input$census_table)
+      # census$census <- rbind(census$census, NA)
+      census_additional$census <- hot_to_r(input$census_table_additional_group)
     }
   })
 
@@ -830,13 +842,29 @@ server <- function(input, output, session) {
       xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
       swell_col <- which(colnames(census$census) == "swelling")
       for (i in which(census$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
-      # xtab <- rhandsontable(census$census[, -c(which(colnames(census$census) %in% c("is_focal", "sex")))], rowHeaders = NULL)
-      # xtab <- hot_row(xtab, c(1,3, 5), readOnly = TRUE)
-      # xtab <- hot_col(xtab, c(1), readOnly = TRUE)
-      # xtab <- hot_col(xtab, c(1), readOnly = TRUE)
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
     }
   })
+  
+  # additional group
+  output$census_table_additional_group <- renderRHandsontable({
+    if (!is.null(census_additional$census) & metadata$get_started == TRUE) {
+      xtab <- rhandsontable(census_additional$census, rowHeaders = NULL)
+      # make certain cells/columns read-only
+      xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
+      swell_col <- which(colnames(census_additional$census) == "swelling")
+      for (i in which(census_additional$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
+      hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
+    }
+  })
+  observeEvent(input$census_table_additional_group, {
+    xxx <- hot_to_r(input$census_table_additional_group)
+    if (!is.null(census_additional$census) & metadata$get_started == TRUE) {
+      xxx <- hot_to_r(input$census_table_additional_group)
+      write.table(xxx, file = metadata$daily_census_additional, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+    }
+  })
+  
   
   
   # adlib aggression -----------------

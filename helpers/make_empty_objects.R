@@ -33,6 +33,7 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         data_root_dir = NULL,
                         day_dir = NULL,
                         daily_census = NULL,
+                        daily_census_additional = NULL,
                         adlib_aggr = NULL,
                         sessions_log = NULL,
                         day_meta = NULL,

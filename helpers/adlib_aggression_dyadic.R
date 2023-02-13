@@ -1,8 +1,3 @@
-input_tab_matching <- matrix(ncol = 2, data = c("time_stamp", "adlib_aggression_dyadic_datetime", 
-                                                "id1", "adlib_aggression_dyadic_id1", 
-                                                "id2", "adlib_aggression_dyadic_id2", 
-                                                "highest_intensity", "adlib_aggression_dyadic_intensity"), byrow = TRUE)
-colnames(input_tab_matching) <- c("tabcol", "inputname")
 
 adlib_aggression_dyadic_dialog <- function() {
   modalDialog("enter event information",
@@ -18,7 +13,9 @@ adlib_aggression_dyadic_dialog <- function() {
 }
 
 # default for reactive data is adlib_agg$dyadic
-adlib_aggression_dyadic_update <- function(reactive_xdata, input_list, what_row = NA) {
+adlib_aggression_dyadic_update <- function(reactive_xdata, input_list, match_table, what_row = NA) {
+  input_tab_matching <- match_table[match_table$context == "adlib_agg", ]
+  
   if (is.na(what_row)) { 
     newrow <- nrow(reactive_xdata) + 1
     reactive_xdata[newrow, ] <- NA

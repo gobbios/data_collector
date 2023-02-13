@@ -1,0 +1,10 @@
+context,tabcol,inputname,type
+focal_agg,time_stamp,focal_aggression_dyadic_datetime,textinput
+focal_agg,focal,focal_aggression_dyadic_id1,textinput
+focal_agg,id2,focal_aggression_dyadic_id2,textinput
+focal_agg,highest_intensity,focal_aggression_dyadic_intensity,radiobutton
+focal_agg,focal_won,focal_aggression_dyadic_focal_won,checkbox
+adlib_agg,time_stamp,adlib_aggression_dyadic_datetime,textinput
+adlib_agg,id1,adlib_aggression_dyadic_id1,textinput
+adlib_agg,id2,adlib_aggression_dyadic_id2,textinput
+adlib_agg,highest_intensity,adlib_aggression_dyadic_intensity,radiobutton

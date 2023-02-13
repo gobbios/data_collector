@@ -31,7 +31,8 @@ all_individuals$present <- FALSE
 all_individuals$swelling <- factor(NA, levels = c("", 0, 1, 2, 3))
 all_individuals$comment <- ""
 
-
+# list with pairs matching input names and data table column names
+mdata <- read.csv("data_name_matching.csv", stringsAsFactors = FALSE)
 
 # list with observers (to be outsourced to csv file eventually)
 all_observers <- c("petterson", "maria", "carel", "jeanne", "robert", "joan", "julia")
@@ -100,7 +101,8 @@ ui <- fluidPage(
              tabPanel("census",
                       rHandsontableOutput("census_table"),
                       actionButton("addnewrowtocensus", "add new row"),
-                      actionButton("addgrouptocensus", "additional group")
+                      actionButton("addgrouptocensus", "additional group"),
+                      rHandsontableOutput("census_table_additional_group")
              ),
 
              tabPanel("nearest neighbors",
@@ -315,7 +317,6 @@ server <- function(input, output, session) {
   
   # reviewing of existing data ---------------------------
   observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata)))
-  observeEvent(focal_aggression_data$aggression, output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata)))
   observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
   observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
 
@@ -419,7 +420,7 @@ server <- function(input, output, session) {
     metadata$grooming_current_parter <- input$grooming_partner_name
     grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "start", input_list = input, metadata_list = metadata)
     removeModal()
-    output$debugging_groom <- renderTable(grooming$grooming[-1, ])
+    output$debugging_groom <- renderTable(grooming$grooming)
     metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num  + 1
 
     # progress update
@@ -460,19 +461,44 @@ server <- function(input, output, session) {
     
   })
 
-  # other focal session aggression -------------------
+  # focal session aggression -------------------
   observeEvent(input$record_focal_aggr, {
     if (metadata$session_is_active) {
       showModal(focal_aggression_dialog(focal_id = metadata$focal_id)) # submit button in dialog: 'focal_aggression'
     }
   })
   observeEvent(input$focal_aggression_abtn, {
-    focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, input_list = input)
+    focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, input_list = input, match_table = mdata, what_row = metadata$edit_focal_aggression)
     write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
     removeModal()
+    metadata$edit_focal_aggression <- NA
+    
   })
-
-
+  
+  # display table for review
+  observeEvent(focal_aggression_data$aggression, output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata)))
+  # edit table in reviewing pane
+  observeEvent(input$rev_aggression_select$select$c, {
+    # print(input$rev_adlib_aggression_select$select$c)
+    which_col <- which(colnames(hot_to_r(input$rev_aggression)) == "action")
+    x <- input$rev_aggression_select$select$c
+    print(which_col)
+    if (!is.na(x) & length(which_col) == 1) {
+      if (x == which_col) {
+        matchdata <- mdata[mdata$context == "focal_agg", ]
+        metadata$edit_focal_aggression <- input$rev_aggression_select$select$r
+        print(metadata$edit_focal_aggression)
+        for (i in 1:nrow(matchdata)) updateTextInput(inputId = unname(matchdata[i, "inputname"]),
+                                                              value = unname(focal_aggression_data$aggression[metadata$edit_focal_aggression, matchdata[i, "tabcol"]]))
+        showModal(focal_aggression_dialog(focal_id = focal_aggression_data$aggression[metadata$edit_focal_aggression, "focal"]))
+        
+        x <- NA
+      }
+    }
+  })
+  
+  
+  
   # start session ----------------------------
   observeEvent(input$start_focal_session_dialog_abtn, {
     # check whether a session is already running
@@ -628,7 +654,11 @@ server <- function(input, output, session) {
     })
   })
   # progress tracker for session
-  observeEvent(metadata$progr_act, {output$focal_dur_progress <- renderText(paste(metadata$progr_act, "of", metadata$focal_duration, "done"))})
+  observeEvent(metadata$progr_act, {
+    if (metadata$session_is_active) {
+      output$focal_dur_progress <- renderText(paste(metadata$progr_act, "of", metadata$focal_duration, "done"))
+    }
+  })
 
   # end session -------------------------
   observeEvent(input$finish_focal_session, {
@@ -752,16 +782,27 @@ server <- function(input, output, session) {
 
   # census related ---------------------
   observeEvent(input$addgrouptocensus, {
-    showModal(additional_group_for_census(all_groups = unique(all_individuals$group), current_group = metadata$group))
+    if (isTRUE(metadata$session_is_active)) {
+      showModal(modalDialog(
+        "Can't add group to census during an active focal session.",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+    } else {
+      showModal(additional_group_for_census(all_groups = unique(all_individuals$group), current_group = metadata$group))
+    }
+    
   })
   observeEvent(input$add_group_selected_submit, {
-    if (!is.null(census$census) & metadata$get_started == TRUE) {
+    if (!is.null(census$census) & metadata$get_started == TRUE & isFALSE(metadata$session_is_active)) {
       xxx <- id_table_initiate(xdata = all_individuals, group = input$add_group_selected, include_nn_ids = FALSE)
       xxx <- xxx[!xxx$id %in% c("new1", "new2"), ]
       cat_table(xxx, head = FALSE)
       # census$census <- rbind(census$census, all_individuals[all_individuals$group == input$add_group_selected, ])
       census$census <- rbind(census$census, xxx)
+      
     }
+    
     removeModal()
   })
   observeEvent(input$census_table, {
@@ -805,7 +846,7 @@ server <- function(input, output, session) {
   })
   # save and write input
   observeEvent(input$adlib_aggression, {
-    adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input, what_row = metadata$edit_adlib_aggr)
+    adlib_agg$dyadic <- adlib_aggression_dyadic_update(reactive_xdata = adlib_agg$dyadic, input_list = input, what_row = metadata$edit_adlib_aggr, match_table = mdata)
     write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
     removeModal()
     metadata$edit_adlib_aggr <- NA
@@ -820,10 +861,11 @@ server <- function(input, output, session) {
     # print(which_col)
     if (!is.na(x) & length(which_col) == 1) {
       if (x == which_col) {
+        matchdata <- mdata[mdata$context == "adlib_agg", ]
         metadata$edit_adlib_aggr <- input$rev_adlib_aggression_select$select$r
         showModal(adlib_aggression_dyadic_dialog())
-        for (i in 1:nrow(input_tab_matching)) updateTextInput(inputId = unname(input_tab_matching[i, "inputname"]), 
-                                                              value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, input_tab_matching[i, "tabcol"]]))
+        for (i in 1:nrow(matchdata)) updateTextInput(inputId = unname(matchdata[i, "inputname"]), 
+                                                              value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, matchdata[i, "tabcol"]]))
         x <- NA
       }
     }

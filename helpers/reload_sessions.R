@@ -30,76 +30,67 @@ reload_list_days <- function(basefolder) {
   x
 }
 
-make_file_paths <- function(basefolder, metadata) {
-  m <- reactiveValuesToList(metadata)
-  out <- list()
-  out$daily_census <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_census.csv"))
-  out$sessions_log <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_log.csv"))
-  out$adlib_aggr <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_aggr.csv"))
-  out
-}
-
-reload_day_prep <- function(day_folder, basefolder = "www") {
-  out <- list(sessions_log = NULL, daily_census = NULL, adlib_aggr = NULL)
-  # recreate global filepaths
-  elements <- unlist(strsplit(day_folder, "_"))
-  fps <- list(dirpath = file.path(basefolder, paste0(elements[1], "_", elements[2])))
-  fps$daily_census <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_census", ".csv"))
-  fps$sessions_log <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_log", ".csv"))
-  fps$adlib_aggr <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_aggr", ".csv"))
-
-  out$fps <- fps
-
-  # read actual files
-  if (file.exists(fps$sessions_log)) {
-    out$sessions_log <- read.csv(fps$sessions_log)
-  }
-  if (file.exists(fps$daily_census)) {
-    out$daily_census <- read.csv(fps$daily_census)
-  }
-  if (file.exists(fps$adlib_aggr)) {
-    out$adlib_aggr <- read.csv(fps$adlib_aggr)
-  }
-
-  out
-}
-
-# folder <- "~/Desktop/data_collector_data/2023-01-16_jeanne"
-# reload_all_focal_sessions <- function(folder) {
-#   xpaths <- list.files(folder, full.names = TRUE, pattern = "foctab.csv$")
-#   out <- lapply(xpaths, function(x) {
-#     y <- paste(unlist(strsplit(basename(x), "_"))[1:4], collapse = "_")
-#     data.frame(session_id = y, read.csv(x))
-#   })
-#   do.call("rbind", out)
-# }
-
-# folder <- "www/2023-01-19_jeanne"
-# read_meta <- function(folder) {
-#   xpaths <- list.files(folder, full.names = TRUE, pattern = "meta.csv$")
-#   x <- read.csv(xpaths, row.names = 1)
-#   out <- list(group = x["group", 1],
-#               date = x["date", 1],
-#               observer = x["observer", 1],
-#               focal_sessions_so_far = as.numeric(x["focal_sessions_so_far", 1]),
-#               focal_duration = as.numeric(x["focal_duration", 1]),
-#               focal_start = as.character(x["focal_start", 1]),
-#               focal_id = x["focal_id", 1],
-#               get_started = as.logical(x["get_started", 1]),
-#               session_is_active = as.logical(x["session_is_active", 1])
-#               )
-#   # checking
-#   # y <- names(isolate(reactiveValuesToList(empty_metadata())))
+# make_file_paths <- function(basefolder, metadata) {
+#   m <- reactiveValuesToList(metadata)
+#   out <- list()
+#   out$daily_census <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_census.csv"))
+#   out$sessions_log <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_log.csv"))
+#   out$adlib_aggr <- file.path(basefolder, paste0(metadata$date, "_global_", metadata$observer, "_0_aggr.csv"))
 #   out
 # }
 
-read_meta_2 <- function(folder, paths_day) {
-  xpaths <- list.files(file.path(paths_day, folder), full.names = TRUE, pattern = "meta.csv$")
-  print(xpaths)
-  if (length(xpaths) != 1) stop("didn't find exactly one ")
-  x <- read.csv(xpaths, row.names = 1)
+# reload_day_prep <- function(day_folder, basefolder = "www") {
+#   out <- list(sessions_log = NULL, daily_census = NULL, adlib_aggr = NULL)
+#   # recreate global filepaths
+#   elements <- unlist(strsplit(day_folder, "_"))
+#   fps <- list(dirpath = file.path(basefolder, paste0(elements[1], "_", elements[2])))
+#   fps$daily_census <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_census", ".csv"))
+#   fps$sessions_log <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_log", ".csv"))
+#   fps$adlib_aggr <- file.path(fps$dirpath, paste0(elements[1], "_global_", elements[2], "_0_aggr", ".csv"))
+# 
+#   out$fps <- fps
+# 
+#   # read actual files
+#   if (file.exists(fps$sessions_log)) {
+#     out$sessions_log <- read.csv(fps$sessions_log)
+#   }
+#   if (file.exists(fps$daily_census)) {
+#     out$daily_census <- read.csv(fps$daily_census)
+#   }
+#   if (file.exists(fps$adlib_aggr)) {
+#     out$adlib_aggr <- read.csv(fps$adlib_aggr)
+#   }
+# 
+#   out
+# }
 
-  metadata <- list()
+reload_meta <- function(metadata, newmeta) {
+  # newmeta is the one-column data frame that represents the metadata: rownames in newmeta correspond to the list names in metadata
+  # important: match data types
+  
+  # check whether names match
+  if (!all(names(metadata) %in% rownames(newmeta))) stop("name mismatch in metadata object during reloading... (1)")
+  if (!all(rownames(newmeta) %in% names(metadata))) stop("name mismatch in metadata object during reloading... (2)")
+  if (!all(names(empty_metadata(as_pure_list = TRUE)) %in% names(metadata))) stop("name mismatch in metadata object during reloading... (3)")
+  
+  x <- newmeta
+  
+  # paths to daily info
+  metadata$data_root_dir <- x["data_root_dir", 1]
+  metadata$day_dir <- x["day_dir", 1]
+  metadata$daily_census <- x["daily_census", 1]
+  metadata$daily_census_additional <- x["daily_census_additional", 1]
+  metadata$adlib_aggr <- x["adlib_aggr", 1]
+  metadata$sessions_log <- x["sessions_log", 1]
+  metadata$day_meta <- x["day_meta", 1]
+
+  # paths to active session if any
+  metadata$active_foc_tab <- x["active_foc_tab", 1]
+  metadata$active_foc_nn <- x["active_foc_nn", 1]
+  metadata$active_foc_groom <- x["active_foc_groom", 1]
+  metadata$active_foc_aggr <- x["active_foc_aggr", 1]
+
+  # actual meta data for day
   metadata$date <- x["date", 1]
   metadata$observer <- x["observer", 1]
   metadata$group <- x["group", 1]
@@ -126,6 +117,11 @@ read_meta_2 <- function(folder, paths_day) {
   metadata$grooming_current_parter <- x["grooming_current_parter", 1]
   metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
   metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
+  # editing monitor
+  metadata$edit_adlib_aggr <- as.numeric(x["edit_adlib_aggr", 1])
+  metadata$edit_focal_grooming <- as.numeric(x["edit_focal_grooming", 1])
+  metadata$edit_focal_aggression <- as.numeric(x["edit_focal_aggression", 1])
+  
   metadata
 }
 

@@ -16,7 +16,7 @@ display_meta <- function(x, xdisp) {
   xnames4 <- c("grooming_in_progress", "grooming_direction", "grooming_current_parter", "grooming_withinsession_num", "grooming_withinevent_num")
   xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", "adlib_aggr", "sessions_log", "day_meta")
   xnames6 <- c("active_foc_tab", "active_foc_nn", "active_foc_groom", "active_foc_aggr")
-  xnames7 <- c("edit_adlib_aggr", "edit_focal_grooming")
+  xnames7 <- c("edit_adlib_aggr", "edit_focal_grooming", "edit_focal_aggression")
   
   if(!all(names(x) %in% c(xnames1, xnames2, xnames3, xnames4, xnames5, xnames6, xnames7))) {
     print(names(x))

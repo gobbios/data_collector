@@ -35,7 +35,7 @@ all_individuals$comment <- ""
 mdata <- read.csv("data_name_matching.csv", stringsAsFactors = FALSE)
 
 # list with observers (to be outsourced to csv file eventually)
-all_observers <- c("petterson", "maria", "carel", "jeanne", "robert", "joan", "julia")
+all_observers <- c("findus", "petterson", "maria", "carel", "jeanne", "robert", "joan", "julia")
 # list with all activity codes for point sampling
 activity_codes <- c("r", "fe", "gr", "oos")
 
@@ -133,8 +133,6 @@ ui <- fluidPage(
                                             rHandsontableOutput("rev_nn")),
                                    tabPanel("adlib aggression",
                                             rHandsontableOutput("rev_adlib_aggression")),
-                                   
-                                   
                       )
              ),
 
@@ -216,60 +214,12 @@ server <- function(input, output, session) {
   observeEvent(input$reload_day_doit_abtn, {
     removeModal()
     if (!is.null(input$available_days_selector_new) & input$available_days_selector_new != "") {
-      # tried to outsource this into a function, but not yet successfully (read_meta_2)
-      # maybe works with a loop?
-      
       xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector_new), full.names = TRUE, pattern = "meta.csv$")
       print(xpaths)
-      if (length(xpaths) != 1) stop("didn't find exactly one ")
+      if (length(xpaths) != 1) stop("didn't find exactly one file that corresponds to day's metadata")
       x <- read.csv(xpaths, row.names = 1)
       
-      # paths to daily info
-      metadata$data_root_dir <- x["data_root_dir", 1]
-      metadata$day_dir <- x["day_dir", 1]
-      metadata$daily_census <- x["daily_census", 1]
-      metadata$daily_census_additional <- x["daily_census_additional", 1]
-      metadata$adlib_aggr <- x["adlib_aggr", 1]
-      metadata$sessions_log <- x["sessions_log", 1]
-      metadata$day_meta <- x["day_meta", 1]
-      
-      # paths to active session if any
-      metadata$active_foc_tab <- x["active_foc_tab", 1]
-      metadata$active_foc_nn <- x["active_foc_nn", 1]
-      metadata$active_foc_groom <- x["active_foc_groom", 1]
-      metadata$active_foc_aggr <- x["active_foc_aggr", 1]
-      
-      # actual meta data for day
-      metadata$date <- x["date", 1]
-      metadata$observer <- x["observer", 1]
-      metadata$group <- x["group", 1]
-      metadata$get_started <- as.logical(x["get_started", 1])
-      metadata$focal_sessions_so_far <- as.numeric(x["focal_sessions_so_far", 1])
-      # current focal session
-      metadata$focal_duration <- as.numeric(x["focal_duration", 1])
-      metadata$focal_id <- x["focal_id", 1]
-      metadata$focal_start <- x["focal_start", 1]
-      metadata$focal_start_hour <- as.numeric(x["focal_start_hour", 1])
-      metadata$focal_start_minute <- as.numeric(x["focal_start_minute", 1])
-      metadata$session_is_active <- as.logical(x["session_is_active", 1])
-      metadata$current_foc_session_id <- x["current_foc_session_id", 1]
-      # progress within the current focal session
-      metadata$progr_target <- as.numeric(x["progr_target", 1])
-      metadata$progr_table_lines <- as.numeric(x["progr_table_lines", 1])
-      metadata$progr_na_vals <- as.numeric(x["progr_na_vals", 1])
-      metadata$progr_oos <- as.numeric(x["progr_oos", 1])
-      metadata$progr_act <- as.numeric(x["progr_act", 1])
-      metadata$nn_scan_no <- as.numeric(x["nn_scan_no", 1])
-      # grooming monitor
-      metadata$grooming_in_progress <- as.logical(x["grooming_in_progress", 1])
-      metadata$grooming_direction <- x["grooming_direction", 1]
-      metadata$grooming_current_parter <- x["grooming_current_parter", 1]
-      metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
-      metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
-      # editing monitor
-      metadata$edit_adlib_aggr <- as.numeric(x["edit_adlib_aggr", 1])
-      metadata$edit_focal_grooming <- as.numeric(x["edit_focal_grooming", 1])
-      metadata$edit_focal_aggression <- as.numeric(x["edit_focal_aggression", 1])
+      metadata <- reload_meta(metadata = metadata, newmeta = x)
       
       # update reactive objects
       # if there is an active focal session
@@ -287,8 +237,14 @@ server <- function(input, output, session) {
       adlib_agg$dyadic <- read.csv(file = metadata$adlib_aggr)
       
       # reviewing pane
-      session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
-      updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
+      if (metadata$focal_sessions_so_far > 0) {
+        session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+        updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
+        
+        output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
+        
+      }
+      
       
       # grooming status
       if (metadata$grooming_in_progress) {
@@ -754,8 +710,7 @@ server <- function(input, output, session) {
     metadata$sessions_log <- file.path(metadata$day_dir, paste0(filename_root, "_log.csv"))
     metadata$day_meta <- file.path(metadata$day_dir, paste0(filename_root, "_meta.csv"))
     if (!dir.exists(metadata$day_dir)) dir.create(metadata$day_dir)
-    
-    
+
     # paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
     # paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
     # if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
@@ -828,9 +783,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$addnewrowtocensus, {
     if (!is.null(census$census) & metadata$get_started == TRUE) {
-      # census$census <- hot_to_r(input$census_table)
-      # census$census <- rbind(census$census, NA)
-      census_additional$census <- hot_to_r(input$census_table_additional_group)
+      census$census <- hot_to_r(input$census_table)
+      census$census <- rbind(census$census, NA)
+      # census_additional$census <- hot_to_r(input$census_table_additional_group)
     }
   })
 

@@ -133,6 +133,8 @@ ui <- fluidPage(
                                             rHandsontableOutput("rev_nn")),
                                    tabPanel("adlib aggression",
                                             rHandsontableOutput("rev_adlib_aggression")),
+                                   tabPanel("focal sessions",
+                                            rHandsontableOutput("rev_sessions_log"))
                       )
              ),
 
@@ -242,6 +244,7 @@ server <- function(input, output, session) {
         updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
         
         output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
+        output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log))
         
       }
       
@@ -283,7 +286,9 @@ server <- function(input, output, session) {
   observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata)))
   observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
   observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
-
+  observeEvent(sessions_log$log, output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log)))
+  
+  
 
   # nearest neighbors -------------------------
   observeEvent(input$nn_scan, {
@@ -693,7 +698,10 @@ server <- function(input, output, session) {
 
   # app start up message and setup for day -----------------------
   startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
-
+  
+  observeEvent(input$duplicate_day_goback_abtn, {
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  })
   observeEvent(input$startnewday_ok_abtn, {
     metadata$date <- as.character(input$date)
     metadata$observer <- input$observer
@@ -702,46 +710,53 @@ server <- function(input, output, session) {
     # check whether data directory is there, and if not and required, create it
     metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
     metadata$day_dir <- normalizePath(file.path(metadata$data_root_dir, 
-                                                paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
-    filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
-    metadata$daily_census <- file.path(metadata$day_dir, paste0(filename_root, "_census.csv"))
-    metadata$daily_census_additional <- file.path(metadata$day_dir, paste0(filename_root, "_census_additional.csv"))
-    metadata$adlib_aggr <- file.path(metadata$day_dir, paste0(filename_root, "_aggr.csv"))
-    metadata$sessions_log <- file.path(metadata$day_dir, paste0(filename_root, "_log.csv"))
-    metadata$day_meta <- file.path(metadata$day_dir, paste0(filename_root, "_meta.csv"))
-    if (!dir.exists(metadata$day_dir)) dir.create(metadata$day_dir)
-
-    # paths_day$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
-    # paths_day$dirpath <- normalizePath(file.path(paths_day$data_root_dir, paste0(as.character(metadata$date), "_", as.character(metadata$observer))), mustWork = FALSE)
-    # if (!dir.exists(paths_day$dirpath)) dir.create(paths_day$dirpath)
-    # path names to daily data files
-    # filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
-    # paths_day$daily_census <- file.path(paths_day$dirpath, paste0(filename_root, "_census.csv"))
-    # paths_day$adlib_aggr <- file.path(paths_day$dirpath, paste0(filename_root, "_aggr.csv"))
-    # paths_day$sessions_log <- file.path(paths_day$dirpath, paste0(filename_root, "_log.csv"))
-    # paths_day$day_meta <- file.path(paths_day$dirpath, paste0(filename_root, "_meta.csv"))
-    # output$info_paths_day <- renderPrint(isolate(reactiveValuesToList(paths_day))) # diagnostics/info
-
-    # initiate census tables
-    census$census <- id_table_initiate(all_individuals, group = metadata$group, include_nn_ids = FALSE)
-    census_additional$census <- census$census[0, ] # blank
+                                                paste0(as.character(metadata$date), "_", 
+                                                       as.character(metadata$group), "_", 
+                                                       as.character(metadata$observer))), mustWork = FALSE)
+    if (dir.exists(metadata$day_dir)) {
+      showModal(modalDialog(
+        title = "Duplicate!!!",
+        "A collection by the name",
+        shQuote(basename(metadata$day_dir)),
+        "already exists (either change your input, or reload an existing collection)",
+        footer = tagList(
+          actionButton("duplicate_day_goback_abtn", "go back")
+        )
+      ))
+    } else {
+      
+      filename_root <- paste0(as.character(as.Date(metadata$date)), "_global_", as.character(metadata$observer), "_0")
+      metadata$daily_census <- file.path(metadata$day_dir, paste0(filename_root, "_census.csv"))
+      metadata$daily_census_additional <- file.path(metadata$day_dir, paste0(filename_root, "_census_additional.csv"))
+      metadata$adlib_aggr <- file.path(metadata$day_dir, paste0(filename_root, "_aggr.csv"))
+      metadata$sessions_log <- file.path(metadata$day_dir, paste0(filename_root, "_log.csv"))
+      metadata$day_meta <- file.path(metadata$day_dir, paste0(filename_root, "_meta.csv"))
+      if (!dir.exists(metadata$day_dir)) dir.create(metadata$day_dir)
+      
+      # initiate census tables
+      census$census <- id_table_initiate(all_individuals, group = metadata$group, include_nn_ids = FALSE)
+      census_additional$census <- census$census[0, ] # blank
+      
+      metadata$get_started <- TRUE
+      output$dategroupobs <- renderText({
+        paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
+              "<p>selected date:<b>", as.character(metadata$date), "</b></p>", "<hr>",
+              "<p>selected observer:<b>", as.character(metadata$observer), "</b></p>")
+      })
+      removeModal()
+      
+      # write files
+      write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
+      write.table(census$census, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      write.table(census_additional$census, file = metadata$daily_census_additional, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
+      write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
+      
+      output$log <- renderTable(sessions_log$log[, 1:4])
+      
+    }
     
-    metadata$get_started <- TRUE
-    output$dategroupobs <- renderText({
-      paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
-            "<p>selected date:<b>", as.character(metadata$date), "</b></p>", "<hr>",
-            "<p>selected observer:<b>", as.character(metadata$observer), "</b></p>")
-    })
-    removeModal()
-
-    # write files
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
-    write.table(census$census, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    write.table(census_additional$census, file = metadata$daily_census_additional, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
-    write.csv(adlib_agg$dyadic, file = metadata$adlib_aggr, quote = FALSE, row.names = FALSE)
     
-    output$log <- renderTable(sessions_log$log[, 1:4])
     
   })
 

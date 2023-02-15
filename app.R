@@ -371,17 +371,23 @@ server <- function(input, output, session) {
 
   output$nn_fem <- renderUI({
     if (metadata$session_is_active) {
-      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "f"), function(X) HTML(paste(X)))
+      temp <- nn_data$nn_data
+      temp <- temp[temp$id != metadata$focal_id, ]
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "f"), function(X) HTML(paste(X)))
     }
   })
   output$nn_male <- renderUI({
     if (metadata$session_is_active) {
-      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "m"), function(X) HTML(paste(X)))
+      temp <- nn_data$nn_data
+      temp <- temp[temp$id != metadata$focal_id, ]
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "m"), function(X) HTML(paste(X)))
     }
   })
   output$nn_other <- renderUI({
     if (metadata$session_is_active) {
-      lapply(render_nn(nn_data$nn_data$id, selected = nn_data$nn_data$in_nn_tracker, sex = nn_data$nn_data$sex, do_which = "o"), function(X) HTML(paste(X)))
+      temp <- nn_data$nn_data
+      temp <- temp[temp$id != metadata$focal_id, ]
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "o"), function(X) HTML(paste(X)))
     }
   })
 

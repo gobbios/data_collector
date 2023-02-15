@@ -274,9 +274,9 @@ server <- function(input, output, session) {
         print(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
         file.remove(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
       } 
-      dir.create(file.path("www", basename(x)[i]), showWarnings = FALSE)
+      dir.create(file.path(getwd(), "www", basename(x)[i]), showWarnings = FALSE)
       y <- list.files(x[i], full.names = TRUE)
-      for (k in y) file.copy(from = k, to = file.path("www", basename(x)[i], basename(k)), overwrite = TRUE)
+      for (k in y) file.copy(from = k, to = file.path(getwd(), "www", basename(x)[i], basename(k)), overwrite = TRUE)
     }
     ad <- reload_list_days(metadata$data_root_dir)
     updateSelectInput(session, inputId = "available_days_selector_new", choices = ad$day_folder_display[!ad$empty])

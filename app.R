@@ -205,7 +205,7 @@ server <- function(input, output, session) {
 
   # reload data -------------------------
   observeEvent(input$reload_day_dialog_btn, {
-    reload_day_dialog_box()
+    showModal(reload_day_dialog_box())
     metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
     ad <- reload_list_days(metadata$data_root_dir)
     updateSelectInput(session, inputId = "available_days_selector_new", choices = ad$day_folder_display[!ad$empty])
@@ -214,10 +214,14 @@ server <- function(input, output, session) {
     startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
   })
   observeEvent(input$reload_day_doit_abtn, {
-    removeModal()
+    
+  })
+  observeEvent(input$reload_day_doit_abtn, {
+    print(input$available_days_selector_new)
+
     if (!is.null(input$available_days_selector_new) & input$available_days_selector_new != "") {
       xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector_new), full.names = TRUE, pattern = "meta.csv$")
-      print(xpaths)
+      # print(xpaths)
       if (length(xpaths) != 1) stop("didn't find exactly one file that corresponds to day's metadata")
       x <- read.csv(xpaths, row.names = 1)
       
@@ -262,9 +266,24 @@ server <- function(input, output, session) {
               "<p>selected date:<b>", as.character(metadata$date), "</b></p>", "<hr>",
               "<p>selected observer:<b>", as.character(metadata$observer), "</b></p>")
       })
-      
+      # removeModal()
+    } else {
+      if (input$available_days_selector_new == "") {
+        print("blub")
+        showModal(modalDialog(
+          title = "Nothing to reload or continue",
+          "Didn't find any collection to load or continue. Either start a new collection or make the example collections available.",
+          easyClose = FALSE,
+          footer = tagList(modalButton("go back"))
+        ))
+        showModal(reload_day_dialog_box())
+        # removeModal()
+      }
     }
+    
+    
   })
+
   
   observeEvent(input$copy_examples_abtn, {
     x <- list.files("examples_sessions", full.names = TRUE, include.dirs = TRUE)

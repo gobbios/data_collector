@@ -1,10 +1,10 @@
 
 reload_day_dialog_box <- function() {
-  showModal(modalDialog(title = "so you want to reload or continue?",
+  modalDialog(title = "so you want to reload or continue?",
                         span("please provide the necessary information"),
                         hr(),
                         selectInput("available_days_selector_new", label = "select day and observer", choices = NULL),
-                        HTML("<p>if this list is empty: there are no days available</p>"),
+                        HTML("<p>if this list is empty: there are no data available to reload</p><p>In this case: either start a new collection, or load an example set...</p>"),
                         actionButton("copy_examples_abtn", "make examples available"),
                         footer = tagList(
                           # modalButton("Cancel"),
@@ -14,7 +14,7 @@ reload_day_dialog_box <- function() {
                           # actionButton("startnewday_ok_abtn", "OK", style = "background: rgba(0, 255, 0, 0.5); height:100px; width:100px"),
                           HTML("<p style='color:Khaki;'>to be done: 'are you sure?'-button")
                         )
-  ))
+  )
 }
 
 

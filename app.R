@@ -65,7 +65,8 @@ ui <- fluidPage(
                       column(2, "",
                              htmlOutput("dategroupobs"),
                              actionButton("open_data_dir_abtn", "open data directory"),
-                             actionButton("show_metadata_abtn", "show meta data")
+                             actionButton("show_metadata_abtn", "show meta data"),
+                             actionButton("start_rismapp", "start analysis")
                       ),
                       column(10, "",
                              # HTML('<p style= "color: red">bla</p>'),
@@ -164,6 +165,9 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   print(getwd())
   
+  observeEvent(input$start_rismapp, {
+    rstudioapi::jobRunScript(path = "helpers/launch_second.R")
+  })
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
   output$panelStatus <- reactive({

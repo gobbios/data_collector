@@ -1,4 +1,0 @@
-time_stamp,session,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
-2023-02-09 09:33:43,2023-02-09_ds_findus_1,1,1,ds,T,receives,unk,unk,unk
-2023-02-09 09:34:27,2023-02-09_ds_findus_1,1,2,ds,T,gives,unk,unk,unk
-2023-02-09 09:34:39,2023-02-09_ds_findus_1,1,3,ds,T,end,unk,unk,unk

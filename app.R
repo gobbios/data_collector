@@ -428,12 +428,14 @@ server <- function(input, output, session) {
     if (metadata$grooming_in_progress == TRUE) {
       modalDialog()
     } else {
-      if (metadata$grooming_in_progress == FALSE & metadata$session_is_active == TRUE) showModal(focal_grooming_start_dialog(focal_id = metadata$focal_id, partners = groompartners_temp))
+      metadata$grooming_time_stamp <- Sys.time()
+      if (metadata$grooming_in_progress == FALSE & metadata$session_is_active == TRUE) showModal(focal_grooming_start_dialog(focal_id = metadata$focal_id, partners = groompartners_temp, metadata = metadata))
     }
 
   })
   observeEvent(input$record_focal_groom_change_btn, {
     # print(metadata$ == TRUE)
+    metadata$grooming_time_stamp <- Sys.time()
     if (metadata$grooming_in_progress == TRUE & metadata$session_is_active == TRUE) showModal(focal_grooming_change_dialog(metadata = metadata))
   })
 
@@ -481,6 +483,7 @@ server <- function(input, output, session) {
     metadata$grooming_withinsession_num <- metadata$grooming_withinsession_num + 1
     metadata$grooming_withinevent_num <- 1
     output$debugging_groom <- renderTable(grooming$grooming)
+    metadata$grooming_time_stamp <- NA
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
     
@@ -588,6 +591,7 @@ server <- function(input, output, session) {
 
     # start new grooming table (reset old one)
     metadata$grooming_in_progress <- FALSE
+    metadata$grooming_time_stamp <- NA
     metadata$grooming_direction <- NA
     metadata$grooming_current_parter <- NA
     metadata$grooming_withinsession_num <- 1

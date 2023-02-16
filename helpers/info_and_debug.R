@@ -13,7 +13,7 @@ display_meta <- function(x, xdisp) {
   xnames1 <- c("date", "observer", "group", "get_started", "focal_sessions_so_far")
   xnames2 <- c("focal_duration", "focal_id", "focal_start", "focal_start_hour", "focal_start_minute", "session_is_active", "current_foc_session_id")
   xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", "progr_act", "nn_scan_no")
-  xnames4 <- c("grooming_in_progress", "grooming_direction", "grooming_current_parter", "grooming_withinsession_num", "grooming_withinevent_num")
+  xnames4 <- c("grooming_in_progress", "grooming_direction", "grooming_current_parter", "grooming_withinsession_num", "grooming_withinevent_num", "grooming_time_stamp")
   xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", "adlib_aggr", "sessions_log", "day_meta")
   xnames6 <- c("active_foc_tab", "active_foc_nn", "active_foc_groom", "active_foc_aggr")
   xnames7 <- c("edit_adlib_aggr", "edit_focal_grooming", "edit_focal_aggression")

@@ -22,7 +22,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
     grooming[newrow, ] <- NA
     grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
-    grooming$time_stamp[newrow] <- as.character(Sys.time())
+    grooming$time_stamp[newrow] <- as.character(metadata_list$grooming_time_stamp)
     grooming$session[newrow] <- metadata_list$current_foc_session_id
     grooming$focal[newrow] <- metadata_list$focal_id
     grooming$partner[newrow] <- metadata_list$grooming_current_parter
@@ -38,7 +38,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
     grooming[newrow, ] <- NA
     grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
-    grooming$time_stamp[newrow] <- as.character(Sys.time())
+    grooming$time_stamp[newrow] <- as.character(metadata_list$grooming_time_stamp)
     grooming$session[newrow] <- metadata_list$current_foc_session_id
     grooming$focal[newrow] <- metadata_list$focal_id
     grooming$partner[newrow] <- metadata_list$grooming_current_parter
@@ -54,7 +54,7 @@ grooming_table_update <- function(grooming, event = c("start", "change", "end"),
     grooming[newrow, ] <- NA
     grooming$event_type[newrow] <- event
     grooming$withinevent_num[newrow] <- metadata_list$grooming_withinevent_num
-    grooming$time_stamp[newrow] <- as.character(Sys.time())
+    grooming$time_stamp[newrow] <- as.character(metadata_list$grooming_time_stamp)
     grooming$session[newrow] <- metadata_list$current_foc_session_id
     grooming$focal[newrow] <- metadata_list$focal_id
     grooming$partner[newrow] <- metadata_list$grooming_current_parter

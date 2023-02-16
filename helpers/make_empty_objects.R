@@ -54,6 +54,7 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         nn_scan_no = 0, # for nn scans...
                         # grooming monitor
                         grooming_in_progress = FALSE,
+                        grooming_time_stamp = NA,
                         grooming_direction = NA,
                         grooming_current_parter = NA,
                         grooming_withinsession_num = 1,

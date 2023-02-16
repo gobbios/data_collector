@@ -12,7 +12,7 @@ review_table_adlib_agg <- function(metadata) {
   NULL
 }
 
-review_table_foctab <- function(input, metadata) {
+review_table_foctab <- function(input, metadata, activity_codes) {
   sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
   fp <- file.path(metadata$day_dir, paste0(sess, "_foctab.csv"))
   if (file.exists(fp)) {
@@ -20,6 +20,7 @@ review_table_foctab <- function(input, metadata) {
     outtab <- read.csv(fp)
     # print(fp)
     outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500, readOnly = TRUE)
+    outtab <- hot_col(hot = outtab, col = "activity", type = "dropdown", source = activity_codes)
     # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
     # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
     outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)

@@ -12,6 +12,7 @@ source("helpers/focal_aggression.R")
 source("helpers/focal_grooming.R")
 source("helpers/id_table.R")
 source("helpers/info_and_debug.R")
+source("helpers/check_foo.R")
 source("helpers/metadata_reset_after_focal.R")
 
 source("helpers/empty_foc_table.R")
@@ -123,6 +124,7 @@ ui <- fluidPage(
                       span(HTML("<p>Here you can review focal sessions that were done on this day. If there is an active session it is selected by default. If there is no finished session, nothing is displayed.</p>")),
                       span(HTML("<p>Also, here you can see and review adlib data (data collected outside a focal session, i.e. for now only 'adlib' aggression).</p>")),
                       selectInput("session_for_review", label = "select session", choices = c("")),
+                      actionButton("data_check", "check current session"),
                       navlistPanel(widths = c(2, 10),
                                    tabPanel("focal (point samples)",
                                             rHandsontableOutput("rev_focal_table")),
@@ -166,7 +168,12 @@ server <- function(input, output, session) {
   print(getwd())
   
   observeEvent(input$start_rismapp, {
-    rstudioapi::jobRunScript(path = "helpers/launch_second.R")
+    # check whether package is there...
+    if (require(rstudioapi, quietly = TRUE)) {
+      jobid <- rstudioapi::jobRunScript(path = "helpers/launch_second.R")
+      rstudioapi::jobSetState(jobid, "succeeded")
+      rstudioapi::jobRemove(jobid)
+    }
   })
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
@@ -206,7 +213,7 @@ server <- function(input, output, session) {
   # NN (new style)
   nn_data <- reactiveValues(nn_data = NULL)
   nn_for_storage <- reactiveValues(nn_for_storage = empty_nn_storage())
-
+  
   # reload data -------------------------
   observeEvent(input$reload_day_dialog_btn, {
     showModal(reload_day_dialog_box())
@@ -251,7 +258,7 @@ server <- function(input, output, session) {
         session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
         updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
         
-        output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata))
+        output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes))
         output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log))
         
       }
@@ -270,7 +277,7 @@ server <- function(input, output, session) {
               "<p>selected date:<b>", as.character(metadata$date), "</b></p>", "<hr>",
               "<p>selected observer:<b>", as.character(metadata$observer), "</b></p>")
       })
-      # removeModal()
+      removeModal()
     } else {
       if (input$available_days_selector_new == "") {
         print("blub")
@@ -306,12 +313,32 @@ server <- function(input, output, session) {
   })
   
   # reviewing of existing data ---------------------------
-  observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata)))
+  observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes)))
   observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
   observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
   observeEvent(sessions_log$log, output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log)))
   
-  
+  # error checking -----------------
+  o <- observeEvent(input$data_check, {
+    # get session from input
+    sess <- input$session_for_review
+    print(sess)
+    if (sess == "") o$destroy()
+    # hand over to function
+    res <- check_foo(session_id = gsub(".*\\((.*)\\).*", "\\1", input$session_for_review), metadata = metadata)
+    cat("number of issues:" , length(res), "\n")
+    
+    if (length(res) == 0) showModal(modalDialog(easyClose = TRUE, "didn't find any problems, yet... ;)"))
+    
+    if (length(res) > 0) {
+      showModal(modalDialog(easyClose = TRUE,
+                            HTML("<p style='color:Red;'>there were some issues:</p>"),
+                            lapply(res, function(x)HTML(paste("<p>", x, "</p>"))),
+                            HTML("<p style='color:Red;'>but please note that fixing them right here won't work at the moment</p>")
+      ))
+    }
+    
+  })
 
   # nearest neighbors -------------------------
   observeEvent(input$nn_scan, {
@@ -470,7 +497,6 @@ server <- function(input, output, session) {
     write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
     removeModal()
     metadata$edit_focal_aggression <- NA
-    
   })
   
   # display table for review
@@ -892,7 +918,7 @@ server <- function(input, output, session) {
         metadata$edit_adlib_aggr <- input$rev_adlib_aggression_select$select$r
         showModal(adlib_aggression_dyadic_dialog())
         for (i in 1:nrow(matchdata)) updateTextInput(inputId = unname(matchdata[i, "inputname"]), 
-                                                              value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, matchdata[i, "tabcol"]]))
+                                                     value = unname(adlib_agg$dyadic[metadata$edit_adlib_aggr, matchdata[i, "tabcol"]]))
         x <- NA
       }
     }

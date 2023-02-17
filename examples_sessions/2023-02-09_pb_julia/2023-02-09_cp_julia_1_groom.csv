@@ -1,0 +1,3 @@
+time_stamp,session,event_type,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
+2023-02-16 15:18:45,2023-02-09_cp_julia_1,start,1,1,cp,C,receives,yes,no,partner
+2023-02-16 15:19:22,2023-02-09_cp_julia_1,end,1,2,cp,C,end,yes,no,partner

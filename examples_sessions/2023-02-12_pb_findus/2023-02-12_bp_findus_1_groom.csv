@@ -1,0 +1,7 @@
+time_stamp,session,event_type,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
+2023-02-16 09:25:21,2023-02-12_bp_findus_1,start,1,1,bp,V,gives,yes,yes,partner
+2023-02-16 09:25:44,2023-02-12_bp_findus_1,end,1,2,bp,V,end,yes,yes,partner
+2023-02-16 09:26:23,2023-02-12_bp_findus_1,start,2,1,bp,T,receives,yes,no,focal
+2023-02-16 09:26:37,2023-02-12_bp_findus_1,change,2,2,bp,T,gives,yes,no,focal
+2023-02-16 09:27:12,2023-02-12_bp_findus_1,change,2,3,bp,T,receives,yes,no,focal
+2023-02-16 09:27:26,2023-02-12_bp_findus_1,end,2,4,bp,T,end,yes,no,focal

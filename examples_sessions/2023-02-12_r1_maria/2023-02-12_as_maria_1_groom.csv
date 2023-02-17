@@ -1,0 +1,3 @@
+time_stamp,session,event_type,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
+2023-02-16 10:35:15,2023-02-12_as_maria_1,start,1,1,as,A,mutual,yes,unk,partner
+2023-02-16 10:36:16,2023-02-12_as_maria_1,end,1,2,as,A,end,yes,unk,partner

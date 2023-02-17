@@ -1,0 +1,2 @@
+session_id,session_created,focal_id,focal_counter,foc_tab,foc_nn,foc_groom,foc_aggr,path_foc_tab,path_foc_nn,path_foc_groom,path_foc_aggr
+2023-02-12_as_maria_1,2023-02-16 10:34:19,as,1,NA,NA,NA,NA,/Users/cneumann/Documents/data_collector/www/2023-02-12_r1_maria/2023-02-12_as_maria_1_foctab.csv,/Users/cneumann/Documents/data_collector/www/2023-02-12_r1_maria/2023-02-12_as_maria_1_nn.csv,/Users/cneumann/Documents/data_collector/www/2023-02-12_r1_maria/2023-02-12_as_maria_1_groom.csv,/Users/cneumann/Documents/data_collector/www/2023-02-12_r1_maria/2023-02-12_as_maria_1_aggr.csv

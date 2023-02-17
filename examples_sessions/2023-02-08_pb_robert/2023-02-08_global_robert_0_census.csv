@@ -1,0 +1,12 @@
+id,sex,group,is_focal,present,swelling,comment,in_nn_tracker
+ap,f,pb,yes,TRUE,NA,,FALSE
+bp,f,pb,yes,TRUE,NA,,FALSE
+cp,f,pb,yes,TRUE,NA,,FALSE
+lm,m,pb,yes,TRUE,NA,,FALSE
+rm,m,pb,yes,TRUE,NA,,FALSE
+dp,f,pb,yes,TRUE,NA,,FALSE
+oneye,m,pb,no,FALSE,NA,,FALSE
+ep,f,pb,yes,TRUE,NA,,FALSE
+new1,m,pb,no,FALSE,NA,,FALSE
+new2,m,pb,no,FALSE,NA,,FALSE
+rs,NA,NA,NA,TRUE,NA,visiting from r1,FALSE

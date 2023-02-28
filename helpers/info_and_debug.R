@@ -1,4 +1,18 @@
 
+start_rismapp <- function() {
+  # check whether package is there and run from rstudio...
+  willwork <- require(rstudioapi, quietly = TRUE)
+  if (willwork) willwork <- rstudioapi::isAvailable()
+  if (willwork) {
+    jobid <- rstudioapi::jobRunScript(path = "helpers/launch_second.R")
+    rstudioapi::jobSetState(jobid, "succeeded")
+    # rstudioapi::jobRemove(jobid)
+  } else {
+    showModal(modalDialog(span(p("this won't work unless you are running this app from RStudio AND have the 'rstudioapi' package installed")),
+                          span(p("in any case, this is just a shortcut to start another app that is supposed to show the analysis side of things"))))
+  }
+}
+
 display_meta <- function(x, xdisp) {
   # generate HTML for display of meta data in a modal box
   # display 1: 'real' meta data (day-info) 

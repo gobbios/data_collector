@@ -6,10 +6,10 @@ empty_log <- function() {
              session_created = character(0),
              focal_id = character(0),
              focal_counter = integer(0),
-             foc_tab = character(0),
-             foc_nn = character(0),
-             foc_groom = character(0),
-             foc_aggr = character(0),
+             path_foc_tab = character(0),
+             path_foc_nn = character(0),
+             path_foc_groom = character(0),
+             path_foc_aggr = character(0),
              stringsAsFactors = FALSE)
 }
 

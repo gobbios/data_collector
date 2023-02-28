@@ -170,19 +170,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   print(getwd())
   
-  observeEvent(input$start_rismapp, {
-    # check whether package is there and run from rstudio...
-    willwork <- require(rstudioapi, quietly = TRUE)
-    if (willwork) willwork <- rstudioapi::isAvailable()
-    if (willwork) {
-      jobid <- rstudioapi::jobRunScript(path = "helpers/launch_second.R")
-      rstudioapi::jobSetState(jobid, "succeeded")
-      rstudioapi::jobRemove(jobid)
-    } else {
-      showModal(modalDialog(span(p("this won't work unless you are running this app from RStudio AND have the 'rstudioapi' package installed")),
-                            span(p("in any case, this is just a shortcut to start another app that is supposed to show the analysis side of things"))))
-    }
-  })
+  observeEvent(input$start_rismapp, start_rismapp())
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
   output$panelStatus <- reactive({
@@ -267,7 +255,7 @@ server <- function(input, output, session) {
         updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
         
         output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes))
-        output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log))
+        output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log[, c("session_id", "session_created", "focal_id", "focal_counter")], readOnly = TRUE))
         
       }
       
@@ -324,7 +312,7 @@ server <- function(input, output, session) {
   observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes)))
   observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
   observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
-  observeEvent(sessions_log$log, output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log)))
+  observeEvent(sessions_log$log, output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log[, c("session_id", "session_created", "focal_id", "focal_counter")], readOnly = TRUE)))
   
   # error checking -----------------
   o <- observeEvent(input$data_check, {
@@ -934,8 +922,10 @@ server <- function(input, output, session) {
   })
   # display table for review
   observeEvent(adlib_agg$dyadic, output$rev_adlib_aggression <- renderRHandsontable(review_table_adlib_agg(metadata = metadata)))
+  print(isolate(input$rev_adlib_aggression_select$select$c))
   # edit table in reviewing pane
   observeEvent(input$rev_adlib_aggression_select$select$c, {
+    print(isolate(input$rev_adlib_aggression_select$select$c))
     # print(input$rev_adlib_aggression_select$select$c)
     which_col <- which(colnames(hot_to_r(input$rev_adlib_aggression)) == "action")
     x <- input$rev_adlib_aggression_select$select$c

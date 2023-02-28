@@ -62,6 +62,8 @@ display_meta <- function(x, xdisp) {
 }
 
 show_metadata <- function(output, metadata) {
+  # m <- isolate(unlist(metadata))
+  # print(m[order(names(m))])
   showModal(modalDialog(
     # title = "",
     easyClose = TRUE,

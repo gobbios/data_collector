@@ -26,5 +26,8 @@ metadata_reset_after_focal <- function(metadata) {
   metadata$active_foc_groom <- NA
   metadata$active_foc_aggr <- NA
   
+  metadata$edit_focal_aggression <- NA
+  metadata$edit_adlib_aggr <- NA
+  metadata$edit_focal_grooming <- NA
   metadata
 }

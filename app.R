@@ -124,7 +124,7 @@ ui <- fluidPage(
 
              tabPanel("review data",
                       # span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
-                      span(HTML("<p>Here you can review focal sessions that were done on this day. If there is an active session it is selected by default. If there is no finished session, nothing is displayed.</p>")),
+                      span(HTML("<p>Here you can review focal sessions that were done on this day. If there is an active session it is selected by default and any other sessions won't be available. If there is no active session: all sessions done so far can be reviewed. If there is no finished session, nothing is displayed.</p>")),
                       span(HTML("<p>Also, here you can see and review adlib data (data collected outside a focal session, i.e. for now only 'adlib' aggression).</p>")),
                       selectInput("session_for_review", label = "select session", choices = c("")),
                       actionButton("data_check", "check current session"),
@@ -251,7 +251,12 @@ server <- function(input, output, session) {
       
       # reviewing pane
       if (metadata$focal_sessions_so_far > 0) {
-        session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+        # if active session only that session can be reviewed, otherwise all sessions are available
+        if (metadata$session_is_active) {
+          session_id_for_display <- paste0(metadata$focal_id, " (", metadata$current_foc_session_id, ")")
+        } else {
+          session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+        }
         updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
         
         output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes))
@@ -492,8 +497,16 @@ server <- function(input, output, session) {
     }
   })
   observeEvent(input$focal_aggression_abtn, {
-    focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, input_list = input, match_table = mdata, what_row = metadata$edit_focal_aggression)
+    # print(paste("metadata$edit_focal_aggression:", metadata$edit_focal_aggression))
+    focal_aggression_data$aggression <- focal_aggression_dyadic_update(reactive_xdata = focal_aggression_data$aggression, 
+                                                                       input_list = input, match_table = mdata, what_row = metadata$edit_focal_aggression)
+    # cat_table(focal_aggression_data$aggression)
     write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
+    # clean up if editing outside active session
+    # if (!metadata$session_is_active) {
+    #   metadata$active_foc_aggr <- NA
+    #   focal_aggression_data$aggression <- NULL
+    # }
     removeModal()
     metadata$edit_focal_aggression <- NA
   })
@@ -502,19 +515,26 @@ server <- function(input, output, session) {
   observeEvent(focal_aggression_data$aggression, output$rev_aggression <- renderRHandsontable(review_table_aggr(input = input, metadata = metadata)))
   # edit table in reviewing pane
   observeEvent(input$rev_aggression_select$select$c, {
+    # read respective focal aggression file
+    sess <- gsub(".*\\((.*)\\).*", "\\1", input$session_for_review)
+    metadata$active_foc_aggr <- file.path(metadata$day_dir, paste0(sess, "_aggr.csv"))
+    outtab <- read.csv(metadata$active_foc_aggr)
+    focal_aggression_data$aggression <- outtab
+    # print(paste("aggression file exists", file.exists(metadata$active_foc_aggr)))
     # print(input$rev_adlib_aggression_select$select$c)
     which_col <- which(colnames(hot_to_r(input$rev_aggression)) == "action")
     x <- input$rev_aggression_select$select$c
-    print(which_col)
+    # print(x)
     if (!is.na(x) & length(which_col) == 1) {
       if (x == which_col) {
         matchdata <- mdata[mdata$context == "focal_agg", ]
         metadata$edit_focal_aggression <- input$rev_aggression_select$select$r
-        print(metadata$edit_focal_aggression)
+        # print(paste("metadata$edit_focal_aggression:", metadata$edit_focal_aggression))
         for (i in 1:nrow(matchdata)) updateTextInput(inputId = unname(matchdata[i, "inputname"]),
-                                                              value = unname(focal_aggression_data$aggression[metadata$edit_focal_aggression, matchdata[i, "tabcol"]]))
+                                                     value = unname(focal_aggression_data$aggression[metadata$edit_focal_aggression, matchdata[i, "tabcol"]]))
+        # print(paste("trying to edit line", metadata$edit_focal_aggression))
         showModal(focal_aggression_dialog(focal_id = focal_aggression_data$aggression[metadata$edit_focal_aggression, "focal"]))
-        
+        # print(paste("metadata$edit_focal_aggression:", metadata$edit_focal_aggression))
         x <- NA
       }
     }
@@ -609,8 +629,9 @@ server <- function(input, output, session) {
     write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
     write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
     
-    # reviewing pane
-    session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+    # reviewing pane (during active session: only active session must be available for review)
+    # session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
+    session_id_for_display <- paste0(metadata$focal_id, " (", metadata$current_foc_session_id, ")")
     updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
     
   })
@@ -722,7 +743,7 @@ server <- function(input, output, session) {
       # store sessions log
       write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
 
-      # update list for revisions
+      # update list for revisions (now (without active session): all sessions available for review)
       session_id_for_display <- paste0(sessions_log$log$focal_id, " (", sessions_log$log$session_id, ")")
       updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
 
@@ -835,31 +856,24 @@ server <- function(input, output, session) {
   # census ---------------------
   observeEvent(input$addgrouptocensus, {
     if (isTRUE(metadata$session_is_active)) {
-      showModal(modalDialog(
-        "Can't add group to census during an active focal session.",
-        easyClose = TRUE,
-        footer = NULL
-      ))
+      showModal(modalDialog("Can't add group to census during an active focal session.", easyClose = TRUE, footer = NULL))
     } else {
       showModal(additional_group_for_census(all_groups = unique(all_individuals$group), current_group = metadata$group))
     }
-    
   })
+  
   observeEvent(input$add_group_selected_submit, {
     if (!is.null(census$census) & metadata$get_started == TRUE & isFALSE(metadata$session_is_active)) {
       xxx <- id_table_initiate(xdata = all_individuals, group = input$add_group_selected, include_nn_ids = FALSE)
       xxx <- xxx[!xxx$id %in% c("new1", "new2"), ]
       cat_table(xxx, head = FALSE)
-      # census$census <- rbind(census$census, all_individuals[all_individuals$group == input$add_group_selected, ])
-      # census$census <- rbind(census$census, xxx)
       census_additional$census <- xxx
     }
-    
     removeModal()
   })
+  
   observeEvent(input$census_table, {
     xxx <- hot_to_r(input$census_table)
-    # print(paste("nrow presence:", nrow(xxx), "\n"))
     if (!is.null(census$census) & metadata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table)
       write.table(xxx, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
@@ -874,7 +888,6 @@ server <- function(input, output, session) {
       # census_additional$census <- hot_to_r(input$census_table_additional_group)
     }
   })
-
 
   output$census_table <- renderRHandsontable({
     if (!is.null(census$census) & metadata$get_started == TRUE) {
@@ -898,6 +911,7 @@ server <- function(input, output, session) {
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
     }
   })
+  
   observeEvent(input$census_table_additional_group, {
     xxx <- hot_to_r(input$census_table_additional_group)
     if (!is.null(census_additional$census) & metadata$get_started == TRUE) {

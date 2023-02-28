@@ -951,44 +951,14 @@ server <- function(input, output, session) {
   
   # debugging and info ------------------------
   # display current metadata in popup
-  observeEvent(input$show_metadata_abtn, {
-    showModal(modalDialog(
-      # title = "",
-      easyClose = TRUE,
-      fluidRow(
-        column(5, htmlOutput("metadata_info_out1"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px"), 
-        column(5, htmlOutput("metadata_info_out2"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px")
-      ),
-      # hr(),
-      fluidRow(
-        column(5, htmlOutput("metadata_info_out3"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px"), 
-        column(5, htmlOutput("metadata_info_out4"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 10px")
-      ),
-      fluidRow(
-        column(11, htmlOutput("metadata_info_out5"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
-      ),
-      fluidRow(
-        column(11, htmlOutput("metadata_info_out6"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
-      ),
-      fluidRow(
-        column(11, htmlOutput("metadata_info_out7"), style = "border: 1px solid grey; margin: 10px; padding: 2px; border-radius: 5px")
-      )
-      
-    ))
-    output$metadata_info_out1 <- renderUI(display_meta(reactiveValuesToList(metadata), 1))
-    output$metadata_info_out2 <- renderUI(display_meta(reactiveValuesToList(metadata), 2))
-    output$metadata_info_out3 <- renderUI(display_meta(reactiveValuesToList(metadata), 3))
-    output$metadata_info_out4 <- renderUI(display_meta(reactiveValuesToList(metadata), 4))
-    output$metadata_info_out5 <- renderUI(display_meta(reactiveValuesToList(metadata), 5))
-    output$metadata_info_out6 <- renderUI(display_meta(reactiveValuesToList(metadata), 6))
-    output$metadata_info_out7 <- renderUI(display_meta(reactiveValuesToList(metadata), 7))
-  })
+  observeEvent(input$show_metadata_abtn, show_metadata(output = output, metadata = metadata))
   
   # simple debuggging/diagnostics elements
   output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
   output$rsession_info <- renderPrint(sessionInfo())
   output$current_wd <- renderPrint(getwd())
-
+  
+  # open data directory
   observeEvent(input$open_data_dir_abtn, {
     if (dir.exists(metadata$data_root_dir)) system2("open", args = shQuote(metadata$data_root_dir))
   })

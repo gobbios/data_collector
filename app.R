@@ -173,7 +173,7 @@ server <- function(input, output, session) {
   observeEvent(input$start_rismapp, {
     # check whether package is there and run from rstudio...
     willwork <- require(rstudioapi, quietly = TRUE)
-    if (willwork) willwork <- !rstudioapi::isAvailable()
+    if (willwork) willwork <- rstudioapi::isAvailable()
     if (willwork) {
       jobid <- rstudioapi::jobRunScript(path = "helpers/launch_second.R")
       rstudioapi::jobSetState(jobid, "succeeded")

@@ -1,6 +1,6 @@
 
-fp_aggr <- "~/Documents/data_collector/www/2023-02-09_pb_julia/2023-02-09_rm_julia_1_aggr.csv"
-fp_groom <- "~/Documents/data_collector/www/2023-02-09_pb_julia/2023-02-09_rm_julia_1_groom.csv"
+# fp_aggr <- "~/Documents/data_collector/www/2023-02-09_pb_julia/2023-02-09_rm_julia_1_aggr.csv"
+# fp_groom <- "~/Documents/data_collector/www/2023-02-09_pb_julia/2023-02-09_rm_julia_1_groom.csv"
 check_foo <- function(session_id, metadata) {
   out <- list()
   

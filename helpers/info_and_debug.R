@@ -12,15 +12,14 @@ display_meta <- function(x, xdisp) {
   # check whether all elements in meta data are covered (fail-safe if something new is added)
   xnames1 <- c("date", "observer", "group", "get_started", "focal_sessions_so_far")
   xnames2 <- c("focal_duration", "focal_id", "focal_start", "focal_start_hour", "focal_start_minute", "session_is_active", "current_foc_session_id")
-  xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", "progr_act", "nn_scan_no")
+  xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", "progr_act", "nn_scan_no", "consecutive_oos")
   xnames4 <- c("grooming_in_progress", "grooming_direction", "grooming_current_parter", "grooming_withinsession_num", "grooming_withinevent_num", "grooming_time_stamp")
   xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", "adlib_aggr", "sessions_log", "day_meta")
   xnames6 <- c("active_foc_tab", "active_foc_nn", "active_foc_groom", "active_foc_aggr")
   xnames7 <- c("edit_adlib_aggr", "edit_focal_grooming", "edit_focal_aggression")
   
   if(!all(names(x) %in% c(xnames1, xnames2, xnames3, xnames4, xnames5, xnames6, xnames7))) {
-    print(names(x))
-    warning("there seems to be meta data that is ignored for *display* of meta data")
+    warning("there seems to be meta data that is ignored for *display* of meta data (info_and_debug.R)") # print(names(x))
   }
   
   if (xdisp == 1) {

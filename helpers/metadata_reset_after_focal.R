@@ -12,6 +12,7 @@ metadata_reset_after_focal <- function(metadata) {
   metadata$progr_na_vals <- NA
   metadata$progr_oos <- NA
   metadata$progr_act <- NA
+  metadata$consecutive_oos <- 0
   metadata$nn_scan_no <- NA
   metadata$grooming_in_progress <- FALSE
   metadata$grooming_direction <- NA
@@ -24,5 +25,6 @@ metadata_reset_after_focal <- function(metadata) {
   metadata$active_foc_nn <- NA
   metadata$active_foc_groom <- NA
   metadata$active_foc_aggr <- NA
+  
   metadata
 }

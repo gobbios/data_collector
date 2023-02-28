@@ -1,5 +1,6 @@
 # this is the final app...
 
+
 library(shiny)
 library(rhandsontable)
 
@@ -14,6 +15,7 @@ source("helpers/id_table.R")
 source("helpers/info_and_debug.R")
 source("helpers/check_foo.R")
 source("helpers/metadata_reset_after_focal.R")
+source("helpers/focal_session.R")
 
 source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
@@ -83,7 +85,8 @@ ui <- fluidPage(
              tabPanel("focal",
                       column(2, "",
                              textOutput("focal_dur_progress"),
-
+                             textOutput("focal_dur_progress_oos"),
+                             
                              actionButton("record_focal_groom_start_btn", "grooming start"),
                              actionButton("record_focal_groom_change_btn", "grooming switch/end"),
                              hr(),
@@ -168,11 +171,16 @@ server <- function(input, output, session) {
   print(getwd())
   
   observeEvent(input$start_rismapp, {
-    # check whether package is there...
-    if (require(rstudioapi, quietly = TRUE)) {
+    # check whether package is there and run from rstudio...
+    willwork <- require(rstudioapi, quietly = TRUE)
+    if (willwork) willwork <- !rstudioapi::isAvailable()
+    if (willwork) {
       jobid <- rstudioapi::jobRunScript(path = "helpers/launch_second.R")
       rstudioapi::jobSetState(jobid, "succeeded")
       rstudioapi::jobRemove(jobid)
+    } else {
+      showModal(modalDialog(span(p("this won't work unless you are running this app from RStudio AND have the 'rstudioapi' package installed")),
+                            span(p("in any case, this is just a shortcut to start another app that is supposed to show the analysis side of things"))))
     }
   })
   
@@ -665,15 +673,30 @@ server <- function(input, output, session) {
     metadata$progr_act = sum(xxx$activity %in% activity_codes) - metadata$progr_oos
     metadata$progr_table_lines = nrow(xxx)
     metadata$progr_na_vals = sum(is.na(xxx$activity))
+    metadata$consecutive_oos <- count_final_oos(xxx$activity)
 
     if (metadata$progr_act < metadata$progr_target & !is.na(xxx$activity[nrow(xxx)])) {
       xxx <- rbind(xxx, empty_foc_table(start_time = Sys.time(), duration = 1, id = metadata$focal_id, activity_codes = activity_codes))
       xxx$sample[nrow(xxx)] <- nrow(xxx)
       xxx$time_for_display[nrow(xxx)] <- add_one_minute(xxx$time_for_display[nrow(xxx) - 1])
       metadata$progr_table_lines <- nrow(xxx) + 1
-      Sys.sleep(1)
+      Sys.sleep(0.4)
     }
-
+    
+    if (isTRUE(metadata$consecutive_oos == 5)) {
+      showModal(modalDialog(
+        span(p("you reached 5 consecutive oos: maybe you should finish the session and consider your focal lost?"))
+      ))
+    }
+    if (isTRUE(metadata$progr_act == metadata$progr_target)) {
+      showModal(modalDialog(
+        span(p("you reached enough point samples. you probably can finish the session now."))
+      ))
+      
+    }
+    
+    
+    
     # browser()
     v$foctab <- xxx
     output$debug_foctab_progress <- renderUI({
@@ -685,6 +708,7 @@ server <- function(input, output, session) {
   observeEvent(metadata$progr_act, {
     if (metadata$session_is_active) {
       output$focal_dur_progress <- renderText(paste(metadata$progr_act, "of", metadata$focal_duration, "done"))
+      output$focal_dur_progress_oos <- renderText(paste(metadata$consecutive_oos, "trailing oos values"))
     }
   })
 

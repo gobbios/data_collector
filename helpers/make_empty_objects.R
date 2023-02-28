@@ -51,6 +51,7 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         progr_na_vals = NA,
                         progr_oos = NA,
                         progr_act = NA,
+                        consecutive_oos = 0,
                         nn_scan_no = 0, # for nn scans...
                         # grooming monitor
                         grooming_in_progress = FALSE,

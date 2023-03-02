@@ -111,12 +111,6 @@ reload_meta <- function(metadata, newmeta) {
   metadata$progr_oos <- as.numeric(x["progr_oos", 1])
   metadata$progr_act <- as.numeric(x["progr_act", 1])
   metadata$nn_scan_no <- as.numeric(x["nn_scan_no", 1])
-  # grooming monitor
-  metadata$grooming_in_progress <- as.logical(x["grooming_in_progress", 1])
-  metadata$grooming_direction <- x["grooming_direction", 1]
-  metadata$grooming_current_parter <- x["grooming_current_parter", 1]
-  metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
-  metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
   # grooming monitor NEW
   metadata$groom1_in_progress <- as.logical(x["groom1_in_progress", 1])
   metadata$groom1_time_stamp <- x["groom1_time_stamp", 1]

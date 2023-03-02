@@ -53,13 +53,6 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         progr_act = NA,
                         consecutive_oos = 0,
                         nn_scan_no = 0, # for nn scans...
-                        # grooming monitor
-                        grooming_in_progress = FALSE,
-                        grooming_time_stamp = NA,
-                        grooming_direction = NA,
-                        grooming_current_parter = NA,
-                        grooming_withinsession_num = 1,
-                        grooming_withinevent_num = 1,
                         # grooming new
                         groom1_time_stamp = NA,
                         groom1_session_num = 0,

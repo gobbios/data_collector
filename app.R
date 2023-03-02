@@ -12,7 +12,6 @@ source("helpers/review_tables.R")
 source("helpers/startup_dialog_box.R")
 source("helpers/link_directory.R")
 source("helpers/focal_aggression.R")
-source("helpers/focal_grooming.R")
 source("helpers/id_table.R")
 source("helpers/info_and_debug.R")
 source("helpers/check_foo.R")
@@ -25,8 +24,6 @@ source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
 source("helpers/adlib_aggression_dyadic.R")
 source("helpers/add_one_minute.R")
-source("helpers/focal_grooming_start_dialog.R")
-source("helpers/focal_grooming_change_dialog.R")
 source("helpers/render_nn.R")
 source("helpers/additional_group_for_census.R")
 
@@ -88,9 +85,6 @@ ui <- fluidPage(
                       column(2, "",
                              textOutput("focal_dur_progress"),
                              textOutput("focal_dur_progress_oos"),
-                             
-                             actionButton("record_focal_groom_start_btn", "grooming start"),
-                             actionButton("record_focal_groom_change_btn", "grooming switch/end"),
                              hr(),
                              actionButton("record_focal_aggr", "aggression (or some other event)"),
                              hr(),
@@ -106,8 +100,6 @@ ui <- fluidPage(
                       ),
                       column(10, "",
                              span(HTML("<p style='color:Khaki;'>the first two columns will eventually be hidden; other columns can be added as required; names can be changed</p>")),
-                             conditionalPanel(condition = 'output.panelStatus', tagAppendAttributes(tag = textOutput("focal_grooming_in_progress"), class = 'blink_me')),
-                             # conditionalPanel(condition = 'output.panelStatus', tagAppendAttributes(tag = textOutput("focal_grooming_in_progress"))),
                              rHandsontableOutput("focal_table")
                       )
              ),
@@ -170,8 +162,6 @@ ui <- fluidPage(
                       verbatimTextOutput("debug_metagrooming2"),
                       h4("new grooming table:"),
                       tableOutput("debug_groom_new"),
-                      h4("grooming table:"),
-                      tableOutput("debug_groom"),
                       # h4("current adlib aggression:"),
                       # tableOutput("debug_adlib_aggression"),
                       # h4("current focal table in static form"),
@@ -194,8 +184,13 @@ server <- function(input, output, session) {
   outputOptions(output, "panelStatus", suspendWhenHidden = FALSE)
 
   observeEvent(input$test_stuff, {
-    print(unlist(isolate(reactiveValuesToList(v))$progress))
-    print(unlist(isolate(reactiveValuesToList(metadata))))
+    # print(unlist(isolate(reactiveValuesToList(v))$progress))
+    # x <- unlist(isolate(reactiveValuesToList(metadata)))
+    # x <- x[order(names(x))]
+    # print(x)
+    
+    # print(as.numeric(input$test_stuff))
+    assign(paste0("x", as.numeric(input$test_stuff)),isolate(reactiveValuesToList(metadata)),envir=.GlobalEnv)
   })
 
   # metadata (info regarding day): list with names
@@ -309,7 +304,7 @@ server <- function(input, output, session) {
   # adlib aggression data
   adlib_agg <- reactiveValues(dyadic = empty_adlib_aggr())
   # focal session grooming
-  grooming <- reactiveValues(grooming = empty_grooming())
+  # grooming <- reactiveValues(grooming = empty_grooming())
   # focal session aggression
   focal_aggression_data <- reactiveValues(aggression = empty_focal_aggr())
 
@@ -347,7 +342,7 @@ server <- function(input, output, session) {
       # update reactive objects
       # if there is an active focal session
       if (!is.na(metadata$active_foc_tab)) v$foctab <- read.csv(metadata$active_foc_tab)
-      if (!is.na(metadata$active_foc_groom)) grooming$grooming <- read.csv(metadata$active_foc_groom)
+      if (!is.na(metadata$active_foc_groom)) grooming_new$grooming <- read.csv(metadata$active_foc_groom)
       if (!is.na(metadata$active_foc_aggr)) focal_aggression_data$aggression <- read.csv(metadata$active_foc_aggr)
       if (!is.na(metadata$active_foc_nn)) {
         nn_data$nn_data <- read.csv(file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn))
@@ -374,14 +369,6 @@ server <- function(input, output, session) {
         
       }
       
-      
-      # grooming status
-      if (metadata$grooming_in_progress) {
-        # progress update
-        output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
-                                                                                 focal_id = metadata$focal_id,
-                                                                                 current_grooming_parter = metadata$grooming_current_parter))
-      }
       # home panel info
       output$dategroupobs <- renderText({
         paste("<p>selected group:", "<b style='color:red'>", metadata$group, "</b></p>", "<hr>",
@@ -425,7 +412,7 @@ server <- function(input, output, session) {
   
   # reviewing of existing data ---------------------------
   observeEvent(input$focal_table, output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes)))
-  observeEvent(grooming$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
+  observeEvent(grooming_new$grooming, output$rev_groom <- renderRHandsontable(review_table_groom(input = input, metadata = metadata)))
   observeEvent(nn_for_storage$nn_for_storage, output$rev_nn <- renderRHandsontable(review_table_nn(input = input, metadata = metadata)))
   observeEvent(sessions_log$log, output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log[, c("session_id", "session_created", "focal_id", "focal_counter")], readOnly = TRUE)))
   
@@ -534,71 +521,7 @@ server <- function(input, output, session) {
   })
 
 
-  # grooming -----------------------
-  observeEvent(input$record_focal_groom_start_btn, {
-    if (metadata$grooming_in_progress == TRUE) {
-      modalDialog()
-    } else {
-      metadata$grooming_time_stamp <- Sys.time()
-      if (metadata$grooming_in_progress == FALSE & metadata$session_is_active == TRUE) showModal(focal_grooming_start_dialog(focal_id = metadata$focal_id, partners = groompartners_temp, metadata = metadata))
-    }
-
-  })
-  observeEvent(input$record_focal_groom_change_btn, {
-    # print(metadata$ == TRUE)
-    metadata$grooming_time_stamp <- Sys.time()
-    if (metadata$grooming_in_progress == TRUE & metadata$session_is_active == TRUE) showModal(focal_grooming_change_dialog(metadata = metadata))
-  })
-
-
-
-  observeEvent(input$start_grooming, {
-    metadata$grooming_in_progress <- TRUE
-    metadata$grooming_direction <- input$grooming_focal_direction
-    metadata$grooming_current_parter <- input$grooming_partner_name
-    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "start", input_list = input, metadata_list = metadata)
-    removeModal()
-    output$debug_groom <- renderTable(grooming$grooming)
-    metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num  + 1
-
-    # progress update
-    output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
-                                                                  focal_id = metadata$focal_id,
-                                                                  current_grooming_parter = metadata$grooming_current_parter))
-
-    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
-  })
-
-  observeEvent(input$change_grooming, {
-    metadata$grooming_direction <- input$grooming_focal_direction_change
-    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "change", input_list = input, metadata_list = metadata)
-    removeModal()
-    metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num + 1
-    output$debug_groom <- renderTable(grooming$grooming[-1, ])
-
-    # progress update and csv writing
-    output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
-                                                                             focal_id = metadata$focal_id,
-                                                                             current_grooming_parter = metadata$grooming_current_parter))
-    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
-  })
-
-  observeEvent(input$stop_grooming, {
-    grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "end", input_list = input, metadata_list = metadata)
-    removeModal()
-    metadata$grooming_in_progress <- FALSE
-    metadata$grooming_direction <- NA
-    metadata$grooming_current_parter <- NA
-    metadata$grooming_withinsession_num <- metadata$grooming_withinsession_num + 1
-    metadata$grooming_withinevent_num <- 1
-    output$debug_groom <- renderTable(grooming$grooming)
-    metadata$grooming_time_stamp <- NA
-    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
-    write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
-    
-  })
+  # grooming ----------------------
 
   # focal session aggression -------------------
   observeEvent(input$record_focal_aggr, {
@@ -716,14 +639,8 @@ server <- function(input, output, session) {
     removeModal()
 
     # start new grooming table (reset old one)
-    metadata$grooming_in_progress <- FALSE
-    metadata$grooming_time_stamp <- NA
-    metadata$grooming_direction <- NA
-    metadata$grooming_current_parter <- NA
-    metadata$grooming_withinsession_num <- 1
-    metadata$grooming_withinevent_num <- 1
-    grooming$grooming <- empty_grooming()
-    write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+    grooming_new$grooming <- empty_grooming_new()
+    write.csv(grooming_new$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
     
     # start new focal aggression (reset old one)
     focal_aggression_data$aggression <- empty_focal_aggr()
@@ -834,11 +751,11 @@ server <- function(input, output, session) {
   # end session -------------------------
   observeEvent(input$finish_focal_session, {
     # check for ongoing grooming!!!
-    if (metadata$session_is_active & metadata$grooming_in_progress) {
+    if (metadata$session_is_active & (metadata$groom1_in_progress | metadata$groom2_in_progress)) {
       showModal(modalDialog("grooming still ongoing: something needs to be done"))
     }
 
-    if (metadata$session_is_active & !metadata$grooming_in_progress) {
+    if (metadata$session_is_active & !metadata$groom1_in_progress & !metadata$groom2_in_progress) {
       temp_object <- v$foctab
       temp_object$time_stamp <- as.character(temp_object$time_stamp)
       # store focal table
@@ -847,7 +764,7 @@ server <- function(input, output, session) {
       write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
       write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
       # store grooming
-      write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
+      write.csv(grooming_new$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
       # store aggression
       write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
       # store sessions log
@@ -863,31 +780,6 @@ server <- function(input, output, session) {
       
       
       metadata <- metadata_reset_after_focal(metadata)
-      # metadata$focal_id <- NA
-      # metadata$current_foc_session_id <- NA
-      # metadata$session_is_active <- FALSE
-      # metadata$focal_start <- NA
-      # metadata$focal_start_hour <- NA
-      # metadata$focal_start_minute <- NA
-      
-      # metadata$progr_target <- NA
-      # metadata$progr_table_lines <- NA
-      # metadata$progr_na_vals <- NA
-      # metadata$progr_oos <- NA
-      # metadata$progr_act <- NA
-      # metadata$nn_scan_no <- NA
-      # metadata$grooming_in_progress <- FALSE
-      # metadata$grooming_direction <- NA
-      # metadata$grooming_current_parter <- NA
-      # metadata$grooming_withinsession_num <- 1
-      # metadata$grooming_withinevent_num <- 1
-      # 
-      # metadata$current_foc_session_id <- NA
-      # metadata$active_foc_tab <- NA
-      # metadata$active_foc_nn <- NA
-      # metadata$active_foc_groom <- NA
-      # metadata$active_foc_aggr <- NA
-      
       
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
       write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)

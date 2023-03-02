@@ -18,7 +18,6 @@ source("helpers/check_foo.R")
 source("helpers/metadata_reset_after_focal.R")
 source("helpers/focal_session.R")
 
-source("helpers/empty_foc_table.R")
 source("helpers/reload_sessions.R")
 source("helpers/focal_start_session_dialog.R")
 source("helpers/focal_start_session.R")
@@ -99,7 +98,7 @@ ui <- fluidPage(
                              
                       ),
                       column(10, "",
-                             span(HTML("<p style='color:Khaki;'>the first two columns will eventually be hidden; other columns can be added as required; names can be changed</p>")),
+                             span(HTML("<p style='color:Khaki;'>this is a demo: more columns can be added as required; names can be changed</p>")),
                              rHandsontableOutput("focal_table")
                       )
              ),
@@ -578,8 +577,7 @@ server <- function(input, output, session) {
     metadata$focal_duration <- input$focal_duration
     metadata$focal_id <- input$focal_name
 
-    eft <- empty_foc_table(start_time = metadata$focal_start, duration = metadata$focal_duration, id = metadata$focal_id, activity_codes = activity_codes)
-    v$foctab <- eft
+    v$foctab <- empty_foc_table(start_time = metadata$focal_start, duration = metadata$focal_duration, id = metadata$focal_id, activity_codes = activity_codes)
 
     metadata$progr_target = as.numeric(metadata$focal_duration)
     metadata$progr_table_lines = as.numeric(metadata$focal_duration)
@@ -607,7 +605,7 @@ server <- function(input, output, session) {
     sessions_log$log$path_foc_nn[metadata$focal_sessions_so_far] <- metadata$active_foc_nn
     sessions_log$log$path_foc_groom[metadata$focal_sessions_so_far] <- metadata$active_foc_groom
     sessions_log$log$path_foc_aggr[metadata$focal_sessions_so_far] <- metadata$active_foc_aggr
-    cat_table(sessions_log$log)
+    # cat_table(sessions_log$log)
 
     write.table(v$foctab, file = metadata$active_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     write.table(sessions_log$log, file = metadata$sessions_log, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
@@ -660,18 +658,13 @@ server <- function(input, output, session) {
     metadata$focal_start_hour <- x[1]
   })
 
-  remcols <- c("time_stamp", "sample")
   output$focal_table <- renderRHandsontable({
     if (!is.null(v$foctab)) {
-      # outtab <- v$foctab[, -c(which(colnames(v$foctab) %in% remcols))]
       outtab <- v$foctab
-      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500)
-      # outtab <- hot_col(outtab, "scratches", readOnly = TRUE)
-      # hot_table(outtab, highlightCol = TRUE, highlightRow = TRUE)
+      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500, 
+                              colHeaders = c("sample", "time stamp", "time", "id", "activity", "loud call", "scratches"))
       outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
-      # outtab <- hot_col(outtab, col = 1, colWidths = 0.1)
-      # outtab <- hot_col(outtab, col = "time_stamp", colWidths = 0.1)
-
+      outtab <- hot_col(hot = outtab, col = c("time stamp", "sample"), colWidths = 0.1)
       outtab
     }
   })
@@ -679,7 +672,6 @@ server <- function(input, output, session) {
     xxx <- hot_to_r(input$focal_table)
     write.table(xxx, file = metadata$active_foc_tab, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
     output$static_foctab <- renderTable(xxx)
-
 
     # update progress tracker and add rows to focal table if required (automated better than manually via addrow-button)
     metadata$progr_oos = sum(xxx$activity %in% "oos")
@@ -705,7 +697,6 @@ server <- function(input, output, session) {
       showModal(modalDialog(
         span(p("you reached enough point samples. you probably can finish the session now."))
       ))
-      
     }
     
     
@@ -878,6 +869,8 @@ server <- function(input, output, session) {
       xtab <- rhandsontable(census$census, rowHeaders = NULL)
       # make certain cells/columns read-only
       xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
+      xtab <- hot_col(xtab, col = c("is_focal", "in_nn_tracker"), colWidths = 0.1)
+
       swell_col <- which(colnames(census$census) == "swelling")
       for (i in which(census$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
@@ -890,6 +883,7 @@ server <- function(input, output, session) {
       xtab <- rhandsontable(census_additional$census, rowHeaders = NULL)
       # make certain cells/columns read-only
       xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
+      xtab <- hot_col(xtab, col = c("is_focal", "in_nn_tracker"), colWidths = 0.1)
       swell_col <- which(colnames(census_additional$census) == "swelling")
       for (i in which(census_additional$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
       hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)

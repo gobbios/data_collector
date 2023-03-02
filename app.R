@@ -863,7 +863,12 @@ server <- function(input, output, session) {
   observeEvent(input$addnewrowtocensus, {
     if (!is.null(census$census) & metadata$get_started == TRUE) {
       census$census <- hot_to_r(input$census_table)
-      census$census <- rbind(census$census, NA)
+      if (is.na(rev(census$census$id)[1])) {
+        showNotification("Can only add one additional individual at a time. Please fill the blank line first before adding another new individual.")
+      } else {
+        census$census <- rbind(census$census, NA)
+      }
+      
       # census_additional$census <- hot_to_r(input$census_table_additional_group)
     }
   })

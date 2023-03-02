@@ -1,6 +1,0 @@
-time_stamp,session,event_type,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
-2023-02-17 09:24:33,2023-02-08_cp_robert_1,start,1,1,cp,D,receives,yes,yes,partner
-2023-02-17 09:25:19,2023-02-08_cp_robert_1,change,1,2,cp,D,receives,yes,yes,partner
-2023-02-17 09:25:41,2023-02-08_cp_robert_1,change,1,3,cp,D,gives,yes,yes,partner
-2023-02-17 09:26:28,2023-02-08_cp_robert_1,change,1,4,cp,D,receives,yes,yes,partner
-2023-02-17 09:26:33,2023-02-08_cp_robert_1,end,1,5,cp,D,end,yes,yes,partner

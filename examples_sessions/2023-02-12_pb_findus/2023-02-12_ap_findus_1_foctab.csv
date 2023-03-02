@@ -1,7 +1,0 @@
-sample,time_stamp,time_for_display,id,activity,loud_call,scratches
-1,2023-02-12 09:34:00,09:34,ap,fe,FALSE,2
-2,2023-02-12 09:35:00,09:35,ap,fe,FALSE,1
-3,2023-02-12 09:36:00,09:36,ap,gr,FALSE,0
-4,2023-02-12 09:37:00,09:37,ap,r,FALSE,2
-5,2023-02-12 09:38:00,09:38,ap,r,FALSE,0
-6,2023-02-16 09:35:08,09:39,ap,NA,FALSE,0

@@ -1,0 +1,2 @@
+session_id,session_created,focal_id,focal_counter,path_foc_tab,path_foc_nn,path_foc_groom,path_foc_aggr
+2023-03-01_ep_petterson_1,2023-03-02 15:31:14,ep,1,/Users/cneumann/Documents/data_collector/www/2023-03-01_pb_petterson/2023-03-01_ep_petterson_1_foctab.csv,/Users/cneumann/Documents/data_collector/www/2023-03-01_pb_petterson/2023-03-01_ep_petterson_1_nn.csv,/Users/cneumann/Documents/data_collector/www/2023-03-01_pb_petterson/2023-03-01_ep_petterson_1_groom.csv,/Users/cneumann/Documents/data_collector/www/2023-03-01_pb_petterson/2023-03-01_ep_petterson_1_aggr.csv

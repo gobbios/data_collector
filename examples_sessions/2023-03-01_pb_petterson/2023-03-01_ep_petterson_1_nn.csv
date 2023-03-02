@@ -1,0 +1,15 @@
+session_id,scan_no,id,present
+2023-03-01_ep_petterson_1,1,ap,TRUE
+2023-03-01_ep_petterson_1,1,bp,TRUE
+2023-03-01_ep_petterson_1,1,cp,FALSE
+2023-03-01_ep_petterson_1,1,lm,TRUE
+2023-03-01_ep_petterson_1,1,rm,TRUE
+2023-03-01_ep_petterson_1,1,dp,FALSE
+2023-03-01_ep_petterson_1,1,oneye,FALSE
+2023-03-01_ep_petterson_1,1,ep,NA
+2023-03-01_ep_petterson_1,1,new1,FALSE
+2023-03-01_ep_petterson_1,1,new2,FALSE
+2023-03-01_ep_petterson_1,1,AM1,FALSE
+2023-03-01_ep_petterson_1,1,AF1,FALSE
+2023-03-01_ep_petterson_1,1,J1,FALSE
+2023-03-01_ep_petterson_1,1,I1,FALSE

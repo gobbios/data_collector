@@ -1,3 +1,0 @@
-time_stamp,session,event_type,withinsession_num,withinevent_num,focal,partner,direction,approach_by_focal,initated_by_focal,leave_by
-2023-02-16 09:35:26,2023-02-12_ap_findus_1,start,1,1,ap,B,receives,no,yes,partner
-2023-02-16 09:36:09,2023-02-12_ap_findus_1,end,1,2,ap,B,end,no,yes,partner

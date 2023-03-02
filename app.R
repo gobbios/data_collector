@@ -4,6 +4,8 @@
 library(shiny)
 library(rhandsontable)
 
+source("helpers/focal_groom_new.R")
+
 source("helpers/make_empty_objects.R")
 source("helpers/html_styles.R")
 source("helpers/review_tables.R")
@@ -94,7 +96,13 @@ ui <- fluidPage(
                              hr(),
                              actionButton("nn_scan", "nearest neighbour 'scan'"),
                              hr(),
-                             actionButton("finish_focal_session", "finish session")
+                             actionButton("finish_focal_session", "finish session"),
+                             hr(),
+                             h5("new grooming approach"),
+                             uiOutput("groom_ui_1"),
+                             uiOutput("groom_ui_2"),
+                             hr()
+                             
                       ),
                       column(10, "",
                              span(HTML("<p style='color:Khaki;'>the first two columns will eventually be hidden; other columns can be added as required; names can be changed</p>")),
@@ -155,13 +163,20 @@ ui <- fluidPage(
                       verbatimTextOutput("rsession_info")
              ),
              tabPanel("debugging",
+                      h4("new grooming:"),
+                      actionButton("debug_groom_btn", "refresh"),
+                      
+                      verbatimTextOutput("debug_metagrooming1"),
+                      verbatimTextOutput("debug_metagrooming2"),
+                      h4("new grooming table:"),
+                      tableOutput("debug_groom_new"),
                       h4("grooming table:"),
-                      tableOutput("debugging_groom"),
-                      h4("current adlib aggression:"),
-                      tableOutput("debug_adlib_aggression"),
-                      h4("current focal table in static form"),
-                      htmlOutput("debug_foctab_progress"),
-                      tableOutput("static_foctab")
+                      tableOutput("debug_groom"),
+                      # h4("current adlib aggression:"),
+                      # tableOutput("debug_adlib_aggression"),
+                      # h4("current focal table in static form"),
+                      # htmlOutput("debug_foctab_progress"),
+                      # tableOutput("static_foctab")
              ),
              tabPanel("read me", includeMarkdown("manual.Rmd")) # withMathJax(includeMarkdown("manual.Rmd"))
   )
@@ -190,7 +205,102 @@ server <- function(input, output, session) {
   # progress tracker within a focal session (activity counter etc...)
   # tracker for grooming
   metadata <- empty_metadata()
+  
+  # new grooming -------------
+  grooming_new <- reactiveValues(grooming = empty_grooming_new())
+  observeEvent(grooming_new, {
+    output$debug_groom_new <- renderTable(grooming_new$grooming)
+  })
+  
+  
+  observeEvent(input$debug_groom_btn, {
+    x <- c("groom1_time_stamp", "groom1_session_num", "groom1_event_num", "groom1_partner", "groom1_in_progress", "groom1_direction", "groom1_approach_by_focal", "groom1_initated_by_focal", "groom1_leave_by_focal")
+    zzz <- unlist(lapply(x, function(y)metadata[[y]]))
+    names(zzz) <- x
+    output$debug_metagrooming1 <- renderPrint(print(zzz))
+  })
+  observeEvent(input$debug_groom_btn, {
+    x <- c("groom2_time_stamp", "groom2_session_num", "groom2_event_num", "groom2_partner", "groom2_in_progress", "groom2_direction", "groom2_approach_by_focal", "groom2_initated_by_focal", "groom2_leave_by_focal")
+    zzz <- unlist(lapply(x, function(y)metadata[[y]]))
+    names(zzz) <- x
+    output$debug_metagrooming2 <- renderPrint(print(zzz))
+  })
+  
+  # generate UI
+  output$groom_ui_1 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom1_partner, grooming1or2 = 1, is_active = metadata$groom1_in_progress, direction = metadata$groom1_direction))
+  output$groom_ui_2 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom2_partner, grooming1or2 = 2, is_active = metadata$groom2_in_progress, direction = metadata$groom2_direction))
+  
+  # observe start
+  observeEvent(input$groom_start_1_abtn, {
+    metadata$groom1_time_stamp <- as.character(Sys.time())
+    showModal(focal_grooming_start_dialog_new(focal_id = metadata$focal_id, partners = groompartners_temp, grooming1or2 = 1))
+  })
+  observeEvent(input$start_grooming_new_abtn_1, {
+    metadata$groom1_session_num <- metadata$groom1_session_num + 1
+    metadata$groom1_partner <- input$grooming_partner_name
+    metadata$groom1_approach_by_focal <- input$grooming_focal_approach_radio
+    metadata$groom1_initated_by_focal <- input$grooming_focal_init_radio
+    removeModal()
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 1, new_direction = input$grooming_focal_direction, grooming_data = grooming_new$grooming)
+  })
+  
+  observeEvent(input$groom_start_2_abtn, {
+    metadata$groom2_time_stamp <- as.character(Sys.time())
+    showModal(focal_grooming_start_dialog_new(focal_id = metadata$focal_id, partners = groompartners_temp, grooming1or2 = 2))
+  })
+  observeEvent(input$start_grooming_new_abtn_2, {
+    metadata$groom2_session_num <- metadata$groom2_session_num + 1
+    metadata$groom2_partner <- input$grooming_partner_name
+    metadata$groom2_approach_by_focal <- input$grooming_focal_approach_radio
+    metadata$groom2_initated_by_focal <- input$grooming_focal_init_radio
+    removeModal()
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 2, new_direction = input$grooming_focal_direction, grooming_data = grooming_new$grooming)
+  })
+  
+  # observe end
+  observeEvent(input$groom_end_1_abtn, {
+    metadata$groom1_time_stamp <- as.character(Sys.time())
+    showModal(focal_grooming_end_dialog(grooming1or2 = 1))
+  })
+  observeEvent(input$stop_grooming_1_abtn, {
+    metadata$groom1_leave_by_focal <- input$grooming_focal_leave
+    removeModal()
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 1, new_direction = -1, grooming_data = grooming_new$grooming)
+  })
+  
+  observeEvent(input$groom_end_2_abtn, {
+    metadata$groom2_time_stamp <- as.character(Sys.time())
+    showModal(focal_grooming_end_dialog(grooming1or2 = 2))
+  })
+  observeEvent(input$stop_grooming_2_abtn, {
+    metadata$groom2_leave_by_focal <- input$grooming_focal_leave
+    removeModal()
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 2, new_direction = -1, grooming_data = grooming_new$grooming)
+  })
+  
+  # grooming changes
+  observeEvent(input$groom_give_1_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 1, new_direction = 1, grooming_data = grooming_new$grooming)
+  })
+  observeEvent(input$groom_receive_1_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 1, new_direction = 2, grooming_data = grooming_new$grooming)
+  })
+  observeEvent(input$groom_mutual_1_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 1, new_direction = 0, grooming_data = grooming_new$grooming)
+  })
+  
+  observeEvent(input$groom_give_2_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 2, new_direction = 1, grooming_data = grooming_new$grooming)
+  })
+  observeEvent(input$groom_receive_2_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 2, new_direction = 2, grooming_data = grooming_new$grooming)
+  })
+  observeEvent(input$groom_mutual_2_abtn, {
+    grooming_new$grooming <- groom_monitor(xmeta = metadata, grooming1or2 = 2, new_direction = 0, grooming_data = grooming_new$grooming)
+  })
 
+    
+  
   # v: for a single focal session (point samples)
   v <- reactiveValues(foctab = NULL) # the actual data table
   
@@ -448,7 +558,7 @@ server <- function(input, output, session) {
     metadata$grooming_current_parter <- input$grooming_partner_name
     grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "start", input_list = input, metadata_list = metadata)
     removeModal()
-    output$debugging_groom <- renderTable(grooming$grooming)
+    output$debug_groom <- renderTable(grooming$grooming)
     metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num  + 1
 
     # progress update
@@ -465,7 +575,7 @@ server <- function(input, output, session) {
     grooming$grooming <- grooming_table_update(grooming = grooming$grooming, event = "change", input_list = input, metadata_list = metadata)
     removeModal()
     metadata$grooming_withinevent_num <- metadata$grooming_withinevent_num + 1
-    output$debugging_groom <- renderTable(grooming$grooming[-1, ])
+    output$debug_groom <- renderTable(grooming$grooming[-1, ])
 
     # progress update and csv writing
     output$focal_grooming_in_progress <- renderText(grooming_textual_message(direction = metadata$grooming_direction,
@@ -483,7 +593,7 @@ server <- function(input, output, session) {
     metadata$grooming_current_parter <- NA
     metadata$grooming_withinsession_num <- metadata$grooming_withinsession_num + 1
     metadata$grooming_withinevent_num <- 1
-    output$debugging_groom <- renderTable(grooming$grooming)
+    output$debug_groom <- renderTable(grooming$grooming)
     metadata$grooming_time_stamp <- NA
     write.csv(grooming$grooming, file = metadata$active_foc_groom, row.names = FALSE, quote = FALSE)
     write.csv(data.frame(val = unlist(reactiveValuesToList(metadata))), file = metadata$day_meta, row.names = TRUE, quote = FALSE)
@@ -968,9 +1078,9 @@ server <- function(input, output, session) {
   observeEvent(input$show_metadata_abtn, show_metadata(output = output, metadata = metadata))
   
   # simple debuggging/diagnostics elements
-  output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
-  output$rsession_info <- renderPrint(sessionInfo())
-  output$current_wd <- renderPrint(getwd())
+  # output$debug_adlib_aggression <- renderTable(adlib_agg$dyadic)
+  # output$rsession_info <- renderPrint(sessionInfo())
+  # output$current_wd <- renderPrint(getwd())
   
   # open data directory
   observeEvent(input$open_data_dir_abtn, {

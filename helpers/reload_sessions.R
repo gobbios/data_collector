@@ -117,6 +117,29 @@ reload_meta <- function(metadata, newmeta) {
   metadata$grooming_current_parter <- x["grooming_current_parter", 1]
   metadata$grooming_withinsession_num <- as.numeric(x["grooming_withinsession_num", 1])
   metadata$grooming_withinevent_num <- as.numeric(x["grooming_withinevent_num", 1])
+  # grooming monitor NEW
+  metadata$groom1_in_progress <- as.logical(x["groom1_in_progress", 1])
+  metadata$groom1_time_stamp <- x["groom1_time_stamp", 1]
+  metadata$groom1_partner <- x["groom1_partner", 1]
+  metadata$groom1_session_num <- as.numeric(x["groom1_session_num", 1])
+  metadata$groom1_event_num <- as.numeric(x["groom1_event_num", 1])
+  metadata$groom1_direction <- as.numeric(x["groom1_direction", 1])
+  metadata$groom1_approach_by_focal <- x["groom1_approach_by_focal", 1]
+  metadata$groom1_initated_by_focal <- x["groom1_initated_by_focal", 1]
+  metadata$groom1_leave_by_focal <- x["groom1_leave_by_focal", 1]
+  
+  metadata$groom2_in_progress <- as.logical(x["groom2_in_progress", 1])
+  metadata$groom2_time_stamp <- x["groom2_time_stamp", 1]
+  metadata$groom2_partner <- x["groom2_partner", 1]
+  metadata$groom2_session_num <- as.numeric(x["groom2_session_num", 1])
+  metadata$groom2_event_num <- as.numeric(x["groom2_event_num", 1])
+  metadata$groom2_direction <- as.numeric(x["groom2_direction", 1])
+  metadata$groom2_approach_by_focal <- x["groom2_approach_by_focal", 1]
+  metadata$groom2_initated_by_focal <- x["groom2_initated_by_focal", 1]
+  metadata$groom2_leave_by_focal <- x["groom2_leave_by_focal", 1]
+  
+  
+  
   # editing monitor
   metadata$edit_adlib_aggr <- as.numeric(x["edit_adlib_aggr", 1])
   metadata$edit_focal_grooming <- as.numeric(x["edit_focal_grooming", 1])

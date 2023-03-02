@@ -29,5 +29,27 @@ It is possible to do a census on *one* additional group by clicking the 'additio
 Those individuals will *not* be available for the NN data.
 If there is an individual in this second group that you want to include in the NN data, it needs to be added in the top table via the 'add new row' button.
 
+# Grooming
+
+Grooming is recorded primarily as dyadic grooming (but see below for how to handle cases when it becomes triadic).
+To start recording a grooming bout, press the 'start grooming' button.
+This will open a window where essential information needs to be provided, most crucially the direction.
+The direction is always from the focal's perspective: focal gives grooming, focal receives grooming or focal is involved in mutual grooming.
+Once confirmed, the 'start grooming' button will disappear and be replaced by a colorful box.
+
+In this box, the current grooming direction is indicated by an arrow between the two individuals (hopefully self-explanatory).
+In this box there are now three buttons.
+With these you can either change the grooming direction: the two available buttons will indicate the two directions which are possible to change to.
+These buttons will record the change and the arrow in the display will change accordingly.
+
+The final button is used for ending the grooming bout, which again also will open a little window to ask who terminated the grooming bout.
+
+If a dyadic bout turns into a triadic bout, use the 'add triadic' button.
+This one should only be used if there is dyadic grooming ongoing, and a third individual joins the ongoing grooming bout (*Ultimately, I'd like this to become available only if there is dyadic grooming ongoing (or rather: hide the triadic option as long as there is no grooming going on. For now, it simply will not allow to have triadic happening if there is nothing dyadic.)*).
+It works pretty much in the same way as the dyadic data recording.
+
+
+
+
 
 

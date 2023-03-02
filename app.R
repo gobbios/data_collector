@@ -155,11 +155,6 @@ ui <- fluidPage(
                       verbatimTextOutput("rsession_info")
              ),
              tabPanel("debugging",
-                      h4("new grooming:"),
-                      actionButton("debug_groom_btn", "refresh"),
-                      
-                      verbatimTextOutput("debug_metagrooming1"),
-                      verbatimTextOutput("debug_metagrooming2"),
                       h4("new grooming table:"),
                       tableOutput("debug_groom_new"),
                       # h4("current adlib aggression:"),
@@ -207,23 +202,11 @@ server <- function(input, output, session) {
     output$debug_groom_new <- renderTable(grooming_new$grooming)
   })
   
-  
-  observeEvent(input$debug_groom_btn, {
-    x <- c("groom1_time_stamp", "groom1_session_num", "groom1_event_num", "groom1_partner", "groom1_in_progress", "groom1_direction", "groom1_approach_by_focal", "groom1_initated_by_focal", "groom1_leave_by_focal")
-    zzz <- unlist(lapply(x, function(y)metadata[[y]]))
-    names(zzz) <- x
-    output$debug_metagrooming1 <- renderPrint(print(zzz))
-  })
-  observeEvent(input$debug_groom_btn, {
-    x <- c("groom2_time_stamp", "groom2_session_num", "groom2_event_num", "groom2_partner", "groom2_in_progress", "groom2_direction", "groom2_approach_by_focal", "groom2_initated_by_focal", "groom2_leave_by_focal")
-    zzz <- unlist(lapply(x, function(y)metadata[[y]]))
-    names(zzz) <- x
-    output$debug_metagrooming2 <- renderPrint(print(zzz))
-  })
-  
   # generate UI
-  output$groom_ui_1 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom1_partner, grooming1or2 = 1, is_active = metadata$groom1_in_progress, direction = metadata$groom1_direction))
-  output$groom_ui_2 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom2_partner, grooming1or2 = 2, is_active = metadata$groom2_in_progress, direction = metadata$groom2_direction))
+  output$groom_ui_1 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom1_partner, grooming1or2 = 1, 
+                                            is_active = metadata$groom1_in_progress, direction = metadata$groom1_direction))
+  output$groom_ui_2 <- renderUI(ui_grooming(focal = metadata$focal_id, partner = metadata$groom2_partner, grooming1or2 = 2, 
+                                            is_active = metadata$groom2_in_progress, direction = metadata$groom2_direction))
   
   # observe start
   observeEvent(input$groom_start_1_abtn, {
@@ -241,7 +224,12 @@ server <- function(input, output, session) {
   
   observeEvent(input$groom_start_2_abtn, {
     metadata$groom2_time_stamp <- as.character(Sys.time())
-    showModal(focal_grooming_start_dialog_new(focal_id = metadata$focal_id, partners = groompartners_temp, grooming1or2 = 2))
+    if (metadata$groom1_in_progress) {
+      showModal(focal_grooming_start_dialog_new(focal_id = metadata$focal_id, partners = groompartners_temp, grooming1or2 = 2))
+    } else {
+      showModal(modalDialog("please use dyadic option first", easyClose = TRUE))
+    }
+    
   })
   observeEvent(input$start_grooming_new_abtn_2, {
     metadata$groom2_session_num <- metadata$groom2_session_num + 1
@@ -329,8 +317,7 @@ server <- function(input, output, session) {
     
   })
   observeEvent(input$reload_day_doit_abtn, {
-    print(input$available_days_selector_new)
-
+    # print(input$available_days_selector_new)
     if (!is.null(input$available_days_selector_new) & input$available_days_selector_new != "") {
       xpaths <- list.files(file.path(metadata$data_root_dir, input$available_days_selector_new), full.names = TRUE, pattern = "meta.csv$")
       # print(xpaths)
@@ -366,7 +353,6 @@ server <- function(input, output, session) {
         
         output$rev_focal_table <- renderRHandsontable(review_table_foctab(input = input, metadata = metadata, activity_codes = activity_codes))
         output$rev_sessions_log <- renderRHandsontable(rhandsontable(sessions_log$log[, c("session_id", "session_created", "focal_id", "focal_counter")], readOnly = TRUE))
-        
       }
       
       # home panel info
@@ -378,28 +364,19 @@ server <- function(input, output, session) {
       removeModal()
     } else {
       if (input$available_days_selector_new == "") {
-        print("blub")
-        showModal(modalDialog(
-          title = "Nothing to reload or continue",
-          "Didn't find any collection to load or continue. Either start a new collection or make the example collections available.",
-          easyClose = FALSE,
-          footer = tagList(modalButton("go back"))
-        ))
+        showNotification("Didn't find any collection to load or continue. Either start a new collection or make the example collections available.")
         showModal(reload_day_dialog_box())
-        # removeModal()
       }
     }
-    
-    
   })
 
   
   observeEvent(input$copy_examples_abtn, {
     x <- list.files("examples_sessions", full.names = TRUE, include.dirs = TRUE)
-    print(basename(x))
+    # print(basename(x))
     for (i in 1:length(x)) {
       if (dir.exists(file.path("www", basename(x)[i]))) {
-        print(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
+        # print(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
         file.remove(list.files(file.path("www", basename(x)[i]), full.names = TRUE))
       } 
       dir.create(file.path(getwd(), "www", basename(x)[i]), showWarnings = FALSE)
@@ -420,7 +397,7 @@ server <- function(input, output, session) {
   o <- observeEvent(input$data_check, {
     # get session from input
     sess <- input$session_for_review
-    print(sess)
+    # print(sess)
     if (sess == "") o$destroy()
     # hand over to function
     res <- check_foo(session_id = gsub(".*\\((.*)\\).*", "\\1", input$session_for_review), metadata = metadata)
@@ -938,7 +915,7 @@ server <- function(input, output, session) {
   })
   # display table for review
   observeEvent(adlib_agg$dyadic, output$rev_adlib_aggression <- renderRHandsontable(review_table_adlib_agg(metadata = metadata)))
-  print(isolate(input$rev_adlib_aggression_select$select$c))
+  # print(isolate(input$rev_adlib_aggression_select$select$c))
   # edit table in reviewing pane
   observeEvent(input$rev_adlib_aggression_select$select$c, {
     print(isolate(input$rev_adlib_aggression_select$select$c))

@@ -6,6 +6,13 @@
 # if grooming started: change the appearance
 # if grooming ends: bring back starting state
 
+# helper: should the triadic option be available
+show_triadic_ui <- function(metadata, force_show = TRUE) {
+  if (force_show) return(TRUE)
+  res <- FALSE
+  # show it when dyadic is active or 
+}
+
 ui_grooming <- function(focal, partner, direction, is_active, grooming1or2) {
   if (grooming1or2 == 1) start_button <- actionButton(paste0("groom_start_", grooming1or2, "_abtn"), paste0("start grooming"))
   if (grooming1or2 == 2) start_button <- actionButton(paste0("groom_start_", grooming1or2, "_abtn"), paste0("add triadic"))

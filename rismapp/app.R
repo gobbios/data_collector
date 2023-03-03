@@ -129,6 +129,34 @@ server <- function(input, output, session) {
   focalsessions <- do.call("rbind", focalsessions)
   
   
+  # read census data
+  censusdata <- list()
+  pcounter <- 0
+  withProgress(
+    min = 0,
+    max = nrow(collectionlogs),
+    message = "reading census data",
+    for (i in seq_along(allfiles)) {
+      a <- allfiles[[i]]
+      
+      a <- a[grep("_census.csv$", a)]
+      if (length(a) > 0) {
+        for (f in a) {
+          out <- read.csv(f)
+          out <- cbind(collection_id = basename(gsub(pattern = "_0_census.csv$", "", f)), date = NA, out)
+          out$date <- as.Date(substr(out$collection_id, 1, 10))
+          censusdata[[length(censusdata) + 1]] <- out
+          
+          pcounter <- pcounter + 1
+          incProgress(pcounter)
+          Sys.sleep(0.05)
+        }
+      }
+    }
+  )
+  censusdata <- do.call("rbind", censusdata)
+  
+  
   
   
   

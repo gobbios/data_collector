@@ -1,11 +1,9 @@
 # this is the admin/analysis app...
-
 library(shiny)
 library(rhandsontable)
 
 all_observers <- c("findus", "petterson", "maria", "carel", "jeanne", "robert", "joan", "julia")
 all_groups <- c("pb", "r1")
-
 
 ui <- fluidPage(
   navbarPage("analyse me data collada", id = "nav_home",
@@ -22,31 +20,22 @@ ui <- fluidPage(
                         mainPanel(
                           tabsetPanel(
                             tabPanel("overview", rHandsontableOutput("collectionlog")),
-                            tabPanel(rHandsontableOutput("sessionlog"))
+                            tabPanel("focal sessions", rHandsontableOutput("sessionlog")),
+                            tabPanel("swellings", rHandsontableOutput("swellings"))
                           )
                           
                         )
                       )
-             )# ,
-             # tabPanel("focal sessions",
-             #          sidebarLayout(
-             #            sidebarPanel(
-             #              HTML("loading data from..."),
-             #              dateInput("date_from", "from"),
-             #              dateInput("date_to", "to"),
-             #              checkboxGroupInput("group_sel", "group(s)", choices = all_groups),
-             #              checkboxGroupInput("observer_sel", "observer(s)", choices = all_observers),
-             #            ),
-             #            
-             #            mainPanel(
-             #              tabsetPanel(
-             #                tabPanel("focal sessions", rHandsontableOutput("focalsessions"))
-             #                
-             #              )
-             #              
-             #            )
-             #          )
-             #          )
+             
+             ),
+             navbarMenu("swelling", 
+                        tabPanel(title = "mismatches",
+                                 rHandsontableOutput("swellings_mismatches")
+                                 
+                        )
+                        )
+             
+             
   )
 
 )
@@ -54,111 +43,21 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   # load all data...
-  allfiles <- normalizePath(list.files(c("../www", "../examples_sessions", "www", "examples_sessions"), include.dirs = TRUE, full.names = TRUE))
-  fnames <- basename(allfiles)
-  allfiles <- lapply(allfiles, list.files, full.names = TRUE)
-  nfiles <- length(fnames)
-  
+  allfiles <- normalizePath(list.files(c("../www", "www"), include.dirs = TRUE, full.names = TRUE))
+  collection_paths <- allfiles
+
   # read collection log
-  collectionlogs <- vector(mode = "list", length = length(allfiles))
-  pcounter <- 0
-  withProgress(
-    min = 0,
-    max = nfiles,
-    message = "reading collection logs",
-    for (i in seq_along(allfiles)) {
-      out <- read.csv(allfiles[[i]][grep("0_meta.csv", allfiles[[i]])], row.names = 1)
-      collectionlogs[[i]] <- t(out[c("group", "observer", "date", "focal_sessions_so_far"), , drop = FALSE])
-      pcounter <- pcounter + 1
-      if (!interactive()) incProgress(pcounter)
-      Sys.sleep(0.05)
-    }
-  )
-  collectionlogs <- do.call("rbind", collectionlogs)
-  collectionlogs <- data.frame(collectionlogs)
-  collectionlogs$date <- as.Date(collectionlogs$date)
-  collectionlogs$focal_sessions_so_far <- as.integer(collectionlogs$focal_sessions_so_far)
-  rownames(collectionlogs) <- NULL
-  
+  collectionlogs <- read_collection_summary(collection_paths = collection_paths)
+  Sys.sleep(0.5)
   # read session logs
-  sessionlogs <- vector(mode = "list", length = length(allfiles))
-  pcounter <- 0
-  withProgress(
-    min = 0,
-    max = nfiles,
-    message = "reading session logs",
-    for (i in seq_along(allfiles)) {
-      out <- read.csv(allfiles[[i]][grep("0_log.csv", allfiles[[i]])])
-      out <- out[, 1:4, drop = FALSE]
-      # if (nrow(out) == 0) out[1, ] <- NA
-      if (nrow(out) > 0) sessionlogs[[i]] <- cbind(fnames[i], out)
-      pcounter <- pcounter + 1
-      incProgress(pcounter)
-      Sys.sleep(0.05)
-    }
-  )
-  sessionlogs <- do.call("rbind", sessionlogs)
-  
+  sessionlogs <- read_session_log_files(collection_paths = collection_paths)
+  Sys.sleep(0.5)
   # read focal data
-  focalsessions <- list()
-  pcounter <- 0
-  withProgress(
-    min = 0,
-    max = sum(collectionlogs$focal_sessions_so_far),
-    message = "reading focal sessions",
-    for (i in seq_along(allfiles)) {
-      a <- allfiles[[i]]
-      
-      a <- a[grep("_foctab.csv$", a)]
-      if (length(a) > 0) {
-        for (f in a) {
-          out <- read.csv(f)
-          out <- cbind(session_id = basename(gsub(pattern = "_foctab.csv$", "", f)), date = NA, out)
-          out <- out[, !colnames(out) %in% c("sample", "time_stamp")]
-          out$date <- as.Date(substr(out$session_id, 1, 10))
-          out$scratches <- as.integer(out$scratches)
-          focalsessions[[length(focalsessions) + 1]] <- out
-          
-          pcounter <- pcounter + 1
-          incProgress(pcounter)
-          Sys.sleep(0.05)
-        }
-      }
-    }
-  )
-  focalsessions <- do.call("rbind", focalsessions)
-  
-  
+  focalsessions <- read_focalsession_files(collection_paths = collection_paths)
+  Sys.sleep(0.5)
   # read census data
-  censusdata <- list()
-  pcounter <- 0
-  withProgress(
-    min = 0,
-    max = nrow(collectionlogs),
-    message = "reading census data",
-    for (i in seq_along(allfiles)) {
-      a <- allfiles[[i]]
-      
-      a <- a[grep("_census.csv$", a)]
-      if (length(a) > 0) {
-        for (f in a) {
-          out <- read.csv(f)
-          out <- cbind(collection_id = basename(gsub(pattern = "_0_census.csv$", "", f)), date = NA, out)
-          out$date <- as.Date(substr(out$collection_id, 1, 10))
-          censusdata[[length(censusdata) + 1]] <- out
-          
-          pcounter <- pcounter + 1
-          incProgress(pcounter)
-          Sys.sleep(0.05)
-        }
-      }
-    }
-  )
-  censusdata <- do.call("rbind", censusdata)
-  
-  
-  
-  
+  censusdata <- read_census_files(collection_paths = collection_paths)
+  Sys.sleep(0.5)
   
   # update selections
   updateCheckboxGroupInput(inputId = "group_sel", selected = unique(collectionlogs$group))
@@ -168,7 +67,7 @@ server <- function(input, output, session) {
   
   
   # make reactive objects
-  xdata <- reactiveValues(collectionlogs = collectionlogs, trigger = runif(1))
+  xdata <- reactiveValues(collectionlogs = collectionlogs, census = censusdata, trigger = runif(1))
   
   # select
   observeEvent(input$date_from, xdata$trigger <- runif(1))
@@ -179,9 +78,19 @@ server <- function(input, output, session) {
   observeEvent(xdata$trigger, {
     sel <- which(collectionlogs$date <= input$date_to & collectionlogs$date >= input$date_from & collectionlogs$group %in% input$group_sel & collectionlogs$observer %in% input$observer_sel)
     xdata$collectionlogs <- collectionlogs[sel, ]
+    sel <- which(censusdata$date <= input$date_to & censusdata$date >= input$date_from ) #& censusdata$group %in% input$group_sel & censusdata$observer %in% input$observer_sel
+    xdata$census <- censusdata[sel, ]
   })
   
   output$collectionlog <- renderRHandsontable(rhandsontable(xdata$collectionlogs, rowHeaders = FALSE, readOnly = TRUE, digits = 1))
+
+  output$swellings_mismatches <- renderRHandsontable({
+    out <- swelling_mismatches(xdata$census)
+    if (!isFALSE(out)) {
+      out <- rhandsontable(out, rowHeaders = FALSE, readOnly = TRUE, digits = 1)
+      return(out)
+    }
+  })
   
   
   

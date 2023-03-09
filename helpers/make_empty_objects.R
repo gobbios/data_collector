@@ -37,13 +37,17 @@ empty_log <- function() {
 
 
 # metadata to recover/reload days
-# reactive target: 'metadata'
-empty_metadata <- function(as_pure_list = FALSE) {
+empty_metadata <- function(as_pure_list = FALSE, setuplist = NULL) {
   out <- reactiveValues(date = NULL,
                         observer = NULL,
                         group = NULL,
                         get_started = FALSE,
                         focal_sessions_so_far = 0,
+                        # other setup variables (once set at beginning of collection)
+                        setup_hidecolumns = FALSE,
+                        setup_desktopdir = FALSE,
+                        setup_focal_duration_default = 6,
+                        setup_focal_max_consecutive_oos = 5,
                         # paths to active focal session files, if any
                         active_foc_tab = NA, 
                         active_foc_nn = NA, 
@@ -98,10 +102,17 @@ empty_metadata <- function(as_pure_list = FALSE) {
                         edit_focal_grooming = NA,
                         edit_focal_aggression = NA
   )
+  
+  if (!is.null(setuplist)) {
+    out$setup_hidecolumns <- setuplist$setup_hidecolumns
+    out$setup_desktopdir <- setuplist$setup_desktopdir
+    out$setup_focal_duration_default <- setuplist$setup_focal_duration_default
+    out$setup_focal_max_consecutive_oos <- setuplist$setup_focal_max_consecutive_oos
+  }
+  
   if (as_pure_list) out <- isolate(reactiveValuesToList(out))
   out
 }
-
 
 
 

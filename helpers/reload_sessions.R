@@ -75,6 +75,14 @@ reload_meta <- function(metadata, newmeta) {
   
   x <- newmeta
   
+  metadata
+  # other setup variables (once set at beginning of collection)
+  metadata$setup_hidecolumns <- as.logical(x["setup_hidecolumns", 1])
+  metadata$setup_desktopdir <- as.logical(x["setup_desktopdir", 1])
+  metadata$setup_focal_duration_default <- as.numeric(x["setup_focal_duration_default", 1])
+  metadata$setup_focal_max_consecutive_oos <- as.numeric(x["setup_focal_max_consecutive_oos", 1])
+  
+  
   # paths to daily info
   metadata$data_root_dir <- x["data_root_dir", 1]
   metadata$day_dir <- x["day_dir", 1]

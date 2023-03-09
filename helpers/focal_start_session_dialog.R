@@ -1,4 +1,4 @@
-focal_start_session_dialog <- function(potential_focals = NULL) {
+focal_start_session_dialog <- function(potential_focals = NULL, metadata) {
   pot <- "_none"
   if (!is.null(potential_focals)) pot <- sample(potential_focals)[1]
   modalDialog(
@@ -13,7 +13,7 @@ focal_start_session_dialog <- function(potential_focals = NULL) {
                 htmlOutput("focal_session_time_val"),
                 actionButton("incr", "", icon = icon("circle-plus"))
     ),
-    numericInput('focal_duration', 'focal duration', value = 6, min = 2, max = 10, step = 2),
+    numericInput('focal_duration', 'focal duration', value = metadata$setup_focal_duration_default, min = 2, max = 10, step = 2),
 
     footer = tagList(
       actionButton("focal_session_start_abtn", "START", icon = icon("rocket"), style = "background: rgba(0, 255, 0, 0.5); height:100px"),

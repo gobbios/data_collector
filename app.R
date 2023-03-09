@@ -43,6 +43,8 @@ activity_codes <- c("r", "fe", "gr", "oos")
 # temporary placeholder for grooming partners
 groompartners_temp <- LETTERS
 
+# setup parameters
+setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 5)
 
 
 ui <- fluidPage(
@@ -305,7 +307,7 @@ server <- function(input, output, session) {
   # reload data -------------------------
   observeEvent(input$reload_day_dialog_btn, {
     showModal(reload_day_dialog_box())
-    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
+    metadata$data_root_dir <- link_directory(use_dir_on_desktop = metadata$setup_desktopdir)
     ad <- reload_list_days(metadata$data_root_dir)
     updateSelectInput(session, inputId = "available_days_selector_new", choices = ad$day_folder_display[!ad$empty])
   })
@@ -322,9 +324,10 @@ server <- function(input, output, session) {
       # print(xpaths)
       if (length(xpaths) != 1) stop("didn't find exactly one file that corresponds to day's metadata")
       x <- read.csv(xpaths, row.names = 1)
-      
+      # print(nrow(x))
+      # print(length(isolate(reactiveValuesToList(metadata))))
       metadata <- reload_meta(metadata = metadata, newmeta = x)
-      
+      # print("here")
       # update reactive objects
       # if there is an active focal session
       if (!is.na(metadata$active_foc_tab)) v$foctab <- read.csv(metadata$active_foc_tab)
@@ -562,7 +565,7 @@ server <- function(input, output, session) {
         footer = tagList(modalButton("Cancel"))
       ))
     } else {
-      showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == metadata$group & all_individuals$is_focal == "yes"]))
+      showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == metadata$group & all_individuals$is_focal == "yes"], metadata = metadata))
       updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
       metadata$focal_start_hour = curtime()[1]
       metadata$focal_start_minute = curtime()[2]
@@ -688,9 +691,9 @@ server <- function(input, output, session) {
       Sys.sleep(0.4)
     }
     
-    if (isTRUE(metadata$consecutive_oos == 5)) {
+    if (isTRUE(metadata$consecutive_oos == metadata$setup_focal_max_consecutive_oos)) {
       showModal(modalDialog(
-        span(p("you reached 5 consecutive oos: maybe you should finish the session and consider your focal lost?"))
+        span(p("you reached", metadata$setup_focal_max_consecutive_oos, "consecutive oos: maybe you should finish the session and consider your focal lost?"))
       ))
     }
     if (isTRUE(metadata$progr_act == metadata$progr_target)) {
@@ -760,6 +763,23 @@ server <- function(input, output, session) {
 
   # app start up message and setup for day -----------------------
   startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  observeEvent(input$startnewday_setup, {
+    startup_setup_box(setuplist = setuplist)
+  })
+  
+  observeEvent(input$setup_save, {
+    # update metadata from setup input and go back to startup dialogue after
+    metadata <- save_setup(metadata = metadata, inputlist = input) 
+    removeModal()
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  })
+  
+  observeEvent(input$setup_cancel, {
+    removeModal()
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  })
+  
+  
   
   observeEvent(input$duplicate_day_goback_abtn, {
     startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
@@ -770,7 +790,7 @@ server <- function(input, output, session) {
     metadata$group <- input$group
 
     # check whether data directory is there, and if not and required, create it
-    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$desktopdir)
+    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$setup_desktopdir)
     metadata$day_dir <- normalizePath(file.path(metadata$data_root_dir, 
                                                 paste0(as.character(metadata$date), "_", 
                                                        as.character(metadata$group), "_", 

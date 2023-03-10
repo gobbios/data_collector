@@ -1,4 +1,4 @@
-startup_dialog_box <- function(pot_observers, pot_groups) {
+startup_dialog_box <- function(pot_observers, pot_groups, metadata) {
   showModal(modalDialog(title = "hello there, what's up today?",
                         HTML("<p style='color:dodgerblue;'>please ignore any columns that are not self explaining in the generated tables. These columns will eventually be hidden"),
                         hr(),
@@ -21,10 +21,19 @@ startup_dialog_box <- function(pot_observers, pot_groups) {
 startup_setup_box <- function(setuplist) {
   showModal(modalDialog(title = "setup", easyClose = FALSE,
                         "these settings won't have any effect for the moment, but will be implemented progressively",
-                        checkboxInput("setup_hidecolumns", "show extra columns", value = setuplist$setup_hidecolumns),
-                        checkboxInput("setup_desktopdir", "use 'Desktop/data_collector_data' as data directory", value = setuplist$setup_desktopdir),
-                        numericInput("setup_focal_duration_default", "default number of point samples per focal session", min = 1, max = 600, step = 1, value = setuplist$setup_focal_duration_default),
-                        numericInput("setup_focal_max_consecutive_oos", "number of consecutive oos sample until focal session abort", min = 1, max = 60, step = 1, value = setuplist$setup_focal_max_consecutive_oos),
+                        checkboxInput("setup_hidecolumns", "show extra columns",
+                                      value = setuplist$setup_hidecolumns),
+                        checkboxInput("setup_desktopdir", "use 'Desktop/data_collector_data' as data directory", 
+                                      value = setuplist$setup_desktopdir),
+                        numericInput("setup_focal_duration_default", "default number of point samples per focal session", min = 1, max = 600, step = 1, 
+                                     value = setuplist$setup_focal_duration_default),
+                        numericInput("setup_focal_max_consecutive_oos", "number of consecutive oos sample until focal session abort", min = 1, max = 60, step = 1, 
+                                     value = setuplist$setup_focal_max_consecutive_oos),
+                        numericInput("setup_nn_n_age_sex_classes", "number animals per age/sex class for nearest neighbours", min = 1, max = 10, step = 1, 
+                                     value = setuplist$setup_nn_n_age_sex_classes),
+                        numericInput("setup_nn_buttons_per_row", "number of columns for nearest neighbour display", min = 2, max = 20, step = 1, 
+                                     value = setuplist$setup_nn_buttons_per_row),
+                        
                         footer = tagList(
                           actionButton("setup_save", "save"),
                           actionButton("setup_cancel", "cancel")

@@ -44,7 +44,8 @@ activity_codes <- c("r", "fe", "gr", "oos")
 groompartners_temp <- LETTERS
 
 # setup parameters
-setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 5)
+setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 13,
+                  setup_nn_n_age_sex_classes = 4, setup_nn_buttons_per_row = 7)
 
 
 ui <- fluidPage(
@@ -476,23 +477,24 @@ server <- function(input, output, session) {
 
   output$nn_fem <- renderUI({
     if (metadata$session_is_active) {
+      # print(metadata$setup_nn_buttons_per_row)
       temp <- nn_data$nn_data
       temp <- temp[temp$id != metadata$focal_id, ]
-      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "f"), function(X) HTML(paste(X)))
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "f", buttons_per_row = metadata$setup_nn_buttons_per_row), function(X) HTML(paste(X)))
     }
   })
   output$nn_male <- renderUI({
     if (metadata$session_is_active) {
       temp <- nn_data$nn_data
       temp <- temp[temp$id != metadata$focal_id, ]
-      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "m"), function(X) HTML(paste(X)))
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "m", buttons_per_row = metadata$setup_nn_buttons_per_row), function(X) HTML(paste(X)))
     }
   })
   output$nn_other <- renderUI({
     if (metadata$session_is_active) {
       temp <- nn_data$nn_data
       temp <- temp[temp$id != metadata$focal_id, ]
-      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "o"), function(X) HTML(paste(X)))
+      lapply(render_nn(temp$id, selected = temp$in_nn_tracker, sex = temp$sex, do_which = "o", buttons_per_row = metadata$setup_nn_buttons_per_row), function(X) HTML(paste(X)))
     }
   })
 
@@ -622,7 +624,7 @@ server <- function(input, output, session) {
     write.csv(focal_aggression_data$aggression, file = metadata$active_foc_aggr, row.names = FALSE, quote = FALSE)
     
     # initiate nn scan table
-    nn_data$nn_data <- id_table_initiate(all_individuals, group = metadata$group, n_age_sex_classes = 1, include_nn_ids = TRUE)
+    nn_data$nn_data <- id_table_initiate(all_individuals, group = metadata$group, n_age_sex_classes = metadata$setup_nn_n_age_sex_classes, include_nn_ids = TRUE)
     # and update from current census
     nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = hot_to_r(input$census_table))
     # initial nn_storage object for given session
@@ -738,7 +740,6 @@ server <- function(input, output, session) {
       v$foctab = NULL # the actual data table
       # and metadata (including file paths) pertaining to focal sessions
       
-      
       metadata <- metadata_reset_after_focal(metadata)
       
       updateTabsetPanel(session, inputId = "nav_home", selected = "home") # shift focus to home tab
@@ -747,31 +748,31 @@ server <- function(input, output, session) {
   })
 
 
-
-
-
   # app start up message and setup for day -----------------------
-  startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+  observeEvent(metadata, {
+    metadata <- save_setup(metadata = metadata, inputlist = setuplist)
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group), metadata = metadata)
+  }, once = TRUE)
+  
+  
   observeEvent(input$startnewday_setup, {
-    startup_setup_box(setuplist = setuplist)
+    startup_setup_box(setuplist = metadata)
   })
   
   observeEvent(input$setup_save, {
     # update metadata from setup input and go back to startup dialogue after
     metadata <- save_setup(metadata = metadata, inputlist = input) 
     removeModal()
-    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group), metadata = metadata)
   })
   
   observeEvent(input$setup_cancel, {
     removeModal()
-    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group), metadata = metadata)
   })
   
-  
-  
   observeEvent(input$duplicate_day_goback_abtn, {
-    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group))
+    startup_dialog_box(pot_observers = unique(sample(all_observers)), pot_groups = unique(all_individuals$group), metadata = metadata)
   })
   observeEvent(input$startnewday_ok_abtn, {
     metadata$date <- as.character(input$date)

@@ -2,6 +2,8 @@
 metadata_reset_after_focal <- function(metadata) {
   # this is called when finishing a focal session
   # grooming tracker should be nicely reset already when grooming bout is finished, but it's done here again anyway...
+  # changes to setup variables shouldn't be necessary...
+  
   
   metadata$focal_id <- NA
   metadata$current_foc_session_id <- NA

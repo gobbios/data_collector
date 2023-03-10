@@ -27,16 +27,26 @@ display_meta <- function(x, xdisp) {
   
   # check whether all elements in meta data are covered (fail-safe if something new is added)
   xnames1 <- c("date", "observer", "group", "get_started", "focal_sessions_so_far")
-  xnames2 <- c("focal_duration", "focal_id", "focal_start", "focal_start_hour", "focal_start_minute", "session_is_active", "session_limit_reached", "current_foc_session_id")
-  xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", "progr_act", "nn_scan_no", "consecutive_oos")
-  xnames4 <- c("setup_hidecolumns", "setup_desktopdir", "setup_focal_duration_default", "setup_focal_max_consecutive_oos")
+  xnames2 <- c("focal_duration", "focal_id", "focal_start", "focal_start_hour", 
+               "focal_start_minute", 
+               "session_is_active", "session_limit_reached", "current_foc_session_id")
+  xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", 
+               "progr_act", "nn_scan_no", "consecutive_oos")
+  xnames4 <- c("setup_hidecolumns", "setup_desktopdir", "setup_focal_duration_default", 
+               "setup_focal_max_consecutive_oos", "setup_nn_n_age_sex_classes",
+               "setup_nn_buttons_per_row")
   
-  xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", "adlib_aggr", "sessions_log", "day_meta")
+  xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", 
+               "adlib_aggr", "sessions_log", "day_meta")
   xnames6 <- c("active_foc_tab", "active_foc_nn", "active_foc_groom", "active_foc_aggr")
   xnames7 <- c("edit_adlib_aggr", "edit_focal_grooming", "edit_focal_aggression")
   
-  xnames8 <- c("groom1_in_progress", "groom1_direction", "groom1_partner", "groom1_session_num", "groom1_event_num", "groom1_time_stamp", "groom1_approach_by_focal", "groom1_initated_by_focal", "groom1_leave_by_focal")
-  xnames9 <- c("groom2_in_progress", "groom2_direction", "groom2_partner", "groom2_session_num", "groom2_event_num", "groom2_time_stamp", "groom2_approach_by_focal", "groom2_initated_by_focal", "groom2_leave_by_focal")
+  xnames8 <- c("groom1_in_progress", "groom1_direction", "groom1_partner", "groom1_session_num", 
+               "groom1_event_num", "groom1_time_stamp", "groom1_approach_by_focal", 
+               "groom1_initated_by_focal", "groom1_leave_by_focal")
+  xnames9 <- c("groom2_in_progress", "groom2_direction", "groom2_partner", "groom2_session_num", 
+               "groom2_event_num", "groom2_time_stamp", "groom2_approach_by_focal",
+               "groom2_initated_by_focal", "groom2_leave_by_focal")
   
   if(!all(names(x) %in% c(xnames1, xnames2, xnames3, xnames4, xnames8, xnames9, xnames5, xnames6, xnames7))) {
     warning("there seems to be meta data that is ignored for *display* of meta data (info_and_debug.R)") # print(names(x))

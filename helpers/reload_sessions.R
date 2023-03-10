@@ -81,7 +81,8 @@ reload_meta <- function(metadata, newmeta) {
   metadata$setup_desktopdir <- as.logical(x["setup_desktopdir", 1])
   metadata$setup_focal_duration_default <- as.numeric(x["setup_focal_duration_default", 1])
   metadata$setup_focal_max_consecutive_oos <- as.numeric(x["setup_focal_max_consecutive_oos", 1])
-  
+  metadata$setup_nn_n_age_sex_classes <- as.numeric(x["setup_nn_n_age_sex_classes", 1])
+  metadata$setup_nn_buttons_per_row <- as.numeric(x["setup_nn_buttons_per_row", 1])
   
   # paths to daily info
   metadata$data_root_dir <- x["data_root_dir", 1]

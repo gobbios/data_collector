@@ -6,6 +6,7 @@ metadata_reset_after_focal <- function(metadata) {
   metadata$focal_id <- NA
   metadata$current_foc_session_id <- NA
   metadata$session_is_active <- FALSE
+  metadata$session_limit_reached <- FALSE
   metadata$focal_start <- NA
   metadata$focal_start_hour <- NA
   metadata$focal_start_minute <- NA

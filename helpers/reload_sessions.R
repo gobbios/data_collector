@@ -112,6 +112,8 @@ reload_meta <- function(metadata, newmeta) {
   metadata$focal_start_minute <- as.numeric(x["focal_start_minute", 1])
   metadata$session_is_active <- as.logical(x["session_is_active", 1])
   metadata$current_foc_session_id <- x["current_foc_session_id", 1]
+  metadata$session_limit_reached <- as.logical(x["session_limit_reached", 1])
+  
   # progress within the current focal session
   metadata$progr_target <- as.numeric(x["progr_target", 1])
   metadata$progr_table_lines <- as.numeric(x["progr_table_lines", 1])

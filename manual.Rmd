@@ -6,7 +6,7 @@ date: "2023-02-09"
 
 # Definitions
 
-`Collection`: the combination of date, observer and group. 
+`Collection`: the combination of date, observer and group.  In other words, a collection represents all the data an observers is collecting in a single group on a single day.
 
 `Session`: a focal animal session.
 

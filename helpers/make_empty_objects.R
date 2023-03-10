@@ -68,6 +68,7 @@ empty_metadata <- function(as_pure_list = FALSE, setuplist = NULL) {
                         focal_start_hour = NA, 
                         focal_start_minute = NA,
                         session_is_active = FALSE,
+                        session_limit_reached = FALSE,
                         current_foc_session_id = NA,
                         # progress within the current focal session
                         progr_target = NA,

@@ -84,8 +84,7 @@ ui <- fluidPage(
              ),
              tabPanel("focal",
                       column(2, "",
-                             textOutput("focal_dur_progress"),
-                             textOutput("focal_dur_progress_oos"),
+                             uiOutput("focal_progress_message"),
                              hr(),
                              actionButton("record_focal_aggr", "aggression (or some other event)"),
                              hr(),
@@ -161,7 +160,6 @@ ui <- fluidPage(
                       # h4("current adlib aggression:"),
                       # tableOutput("debug_adlib_aggression"),
                       # h4("current focal table in static form"),
-                      # htmlOutput("debug_foctab_progress"),
                       # tableOutput("static_foctab")
              ),
              tabPanel("read me", includeMarkdown("manual.Rmd")) # withMathJax(includeMarkdown("manual.Rmd"))
@@ -690,32 +688,24 @@ server <- function(input, output, session) {
       Sys.sleep(0.4)
     }
     
-    if (isTRUE(metadata$consecutive_oos == metadata$setup_focal_max_consecutive_oos)) {
+    if (isTRUE(metadata$consecutive_oos == metadata$setup_focal_max_consecutive_oos) & isFALSE(metadata$session_limit_reached)) {
       showModal(modalDialog(
         span(p("you reached", metadata$setup_focal_max_consecutive_oos, "consecutive oos: maybe you should finish the session and consider your focal lost?"))
       ))
+      metadata$session_limit_reached <- TRUE
     }
-    if (isTRUE(metadata$progr_act == metadata$progr_target)) {
+    if (isTRUE(metadata$progr_act == metadata$progr_target) & isFALSE(metadata$session_limit_reached)) {
       showModal(modalDialog(
         span(p("you reached enough point samples. you probably can finish the session now."))
       ))
+      metadata$session_limit_reached <- TRUE
     }
     
-    
-    
-    # browser()
     v$foctab <- xxx
-    output$debug_foctab_progress <- renderUI({
-      HTML(paste("activity samples:", metadata$progr_act, "<br>", "oos samples:", metadata$progr_oos, "<br>",
-                 "NA samples:", metadata$progr_na_vals, "<br>", "target:", metadata$progr_target, "<br>", "num rows in table:", metadata$progr_table_lines))
-    })
   })
   # progress tracker for session
   observeEvent(metadata$progr_act, {
-    if (metadata$session_is_active) {
-      output$focal_dur_progress <- renderText(paste(metadata$progr_act, "of", metadata$focal_duration, "done"))
-      output$focal_dur_progress_oos <- renderText(paste(metadata$consecutive_oos, "trailing oos values"))
-    }
+    if (metadata$session_is_active) output$focal_progress_message <- renderUI(generate_focal_progress(metadata = metadata))
   })
 
   # end session -------------------------

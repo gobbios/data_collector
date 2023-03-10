@@ -39,13 +39,14 @@ id_table_update <- function(ori, current_presence) {
 # initial id list for nn data
 id_table_initiate <- function(xdata, group, n_age_sex_classes = 5, include_nn_ids = FALSE) {
   out <- xdata[xdata$group == group, ]
+  out$comment <- " "
   out <- rbind(out, NA)
   out$id[nrow(out)] <- "new1"
   out$sex[nrow(out)] <- "m"
   out$group[nrow(out)] <- group
   out$is_focal[nrow(out)] <- "no"
   out$present[nrow(out)] <- FALSE
-  out$comment[nrow(out)] <- ""
+  out$comment[nrow(out)] <- " "
 
   out <- rbind(out, NA)
   out$id[nrow(out)] <- "new2"
@@ -53,7 +54,7 @@ id_table_initiate <- function(xdata, group, n_age_sex_classes = 5, include_nn_id
   out$group[nrow(out)] <- group
   out$is_focal[nrow(out)] <- "no"
   out$present[nrow(out)] <- FALSE
-  out$comment[nrow(out)] <- ""
+  out$comment[nrow(out)] <- " "
 
   if (include_nn_ids) {
     for (i in 1:4) {
@@ -62,7 +63,7 @@ id_table_initiate <- function(xdata, group, n_age_sex_classes = 5, include_nn_id
         out$group[nrow(out)] <- group
         out$is_focal[nrow(out)] <- "no"
         out$present[nrow(out)] <- NA
-        out$comment[nrow(out)] <- ""
+        out$comment[nrow(out)] <- " "
         out$sex[nrow(out)] <- "o"
       }
       if (i == 1) out$id[nrow(out):(nrow(out) - n_age_sex_classes + 1)] <- paste0(c("AM"), n_age_sex_classes:1)

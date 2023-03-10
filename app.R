@@ -852,9 +852,9 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$census_table, {
-    xxx <- hot_to_r(input$census_table)
     if (!is.null(census$census) & metadata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table)
+      xxx$comment[is.na(xxx$comment)] <- " "
       write.table(xxx, file = metadata$daily_census, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")
       # update nn table if necessary
       nn_data$nn_data <- ammend_nn_from_census(nn = nn_data$nn_data, census = xxx)
@@ -868,39 +868,18 @@ server <- function(input, output, session) {
       } else {
         census$census <- rbind(census$census, NA)
       }
-      
-      # census_additional$census <- hot_to_r(input$census_table_additional_group)
-    }
-  })
-
-  output$census_table <- renderRHandsontable({
-    if (!is.null(census$census) & metadata$get_started == TRUE) {
-      xtab <- rhandsontable(census$census, rowHeaders = NULL)
-      # make certain cells/columns read-only
-      xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
-      xtab <- hot_col(xtab, col = c("is_focal", "in_nn_tracker"), colWidths = 0.1)
-
-      swell_col <- which(colnames(census$census) == "swelling")
-      for (i in which(census$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
-      hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
     }
   })
   
-  # additional group
+  # render output
+  output$census_table <- renderRHandsontable({
+    if (!is.null(census$census) & metadata$get_started == TRUE) census_table_to_hot(census$census)
+  })
   output$census_table_additional_group <- renderRHandsontable({
-    if (!is.null(census_additional$census) & metadata$get_started == TRUE) {
-      xtab <- rhandsontable(census_additional$census, rowHeaders = NULL)
-      # make certain cells/columns read-only
-      xtab <- hot_col(xtab, col = "sex", readOnly = TRUE)
-      xtab <- hot_col(xtab, col = c("is_focal", "in_nn_tracker"), colWidths = 0.1)
-      swell_col <- which(colnames(census_additional$census) == "swelling")
-      for (i in which(census_additional$census$sex == "m")) xtab <- hot_cell(xtab, row = i, col = swell_col, readOnly = TRUE)
-      hot_table(xtab, highlightCol = TRUE, highlightRow = TRUE)
-    }
+    if (!is.null(census_additional$census) & metadata$get_started == TRUE) census_table_to_hot(census_additional$census)
   })
   
   observeEvent(input$census_table_additional_group, {
-    xxx <- hot_to_r(input$census_table_additional_group)
     if (!is.null(census_additional$census) & metadata$get_started == TRUE) {
       xxx <- hot_to_r(input$census_table_additional_group)
       write.table(xxx, file = metadata$daily_census_additional, sep = ",", row.names = FALSE, quote = FALSE, dec = ".")

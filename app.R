@@ -170,7 +170,6 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   print(getwd())
-  
   observeEvent(input$start_rismapp, start_rismapp())
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
@@ -790,7 +789,7 @@ server <- function(input, output, session) {
     metadata$group <- input$group
 
     # check whether data directory is there, and if not and required, create it
-    metadata$data_root_dir <- link_directory(use_dir_on_desktop = input$setup_desktopdir)
+    metadata$data_root_dir <- link_directory(use_dir_on_desktop = metadata$setup_desktopdir)
     metadata$day_dir <- normalizePath(file.path(metadata$data_root_dir, 
                                                 paste0(as.character(metadata$date), "_", 
                                                        as.character(metadata$group), "_", 

@@ -462,6 +462,7 @@ server <- function(input, output, session) {
         nn_for_storage$nn_for_storage <- rbind(nn_for_storage$nn_for_storage, df)
       }
       metadata$nn_scan_no <- metadata$nn_scan_no + 1
+      updateActionButton(inputId = "nn_scan", label = paste("nearest neighbour 'scan'", metadata$nn_scan_no + 1))
       # write file now as well
       write.csv(nn_for_storage$nn_for_storage, file = metadata$active_foc_nn, row.names = FALSE, quote = FALSE)
       write.csv(nn_data$nn_data, file = gsub(pattern = ".csv$", replacement = "_temp.csv", metadata$active_foc_nn), row.names = FALSE, quote = FALSE)
@@ -568,6 +569,7 @@ server <- function(input, output, session) {
     } else {
       showModal(focal_start_session_dialog(potential_focals = all_individuals$id[all_individuals$group == metadata$group & all_individuals$is_focal == "yes"], metadata = metadata))
       updateTabsetPanel(session, inputId = "nav_home", selected = "focal")
+      updateActionButton(inputId = "nn_scan", label = paste("nearest neighbour 'scan'", metadata$nn_scan_no + 1))
       metadata$focal_start_hour = curtime()[1]
       metadata$focal_start_minute = curtime()[2]
     }

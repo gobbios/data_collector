@@ -31,8 +31,8 @@ startup_setup_box <- function(setuplist) {
                                      value = setuplist$setup_focal_max_consecutive_oos),
                         numericInput("setup_nn_n_age_sex_classes", "number animals per age/sex class for nearest neighbours", min = 1, max = 10, step = 1, 
                                      value = setuplist$setup_nn_n_age_sex_classes),
-                        numericInput("setup_nn_buttons_per_row", "number of columns for nearest neighbour display", min = 2, max = 20, step = 1, 
-                                     value = setuplist$setup_nn_buttons_per_row),
+                        selectInput("setup_nn_buttons_per_row", "number of columns for nearest neighbour display", choices = c(4, 6, 12), 
+                                    selected = setuplist$setup_nn_buttons_per_row),
                         
                         footer = tagList(
                           actionButton("setup_save", "save"),

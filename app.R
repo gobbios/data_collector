@@ -44,8 +44,9 @@ activity_codes <- c("r", "fe", "gr", "oos")
 groompartners_temp <- LETTERS
 
 # setup parameters
+# setup_nn_buttons_per_row can be only 4, 6, or 12
 setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 13,
-                  setup_nn_n_age_sex_classes = 4, setup_nn_buttons_per_row = 7)
+                  setup_nn_n_age_sex_classes = 5, setup_nn_buttons_per_row = 12) 
 
 
 ui <- fluidPage(
@@ -122,7 +123,7 @@ ui <- fluidPage(
                       p(),
                       fluidRow(htmlOutput("nn_other"))
              ),
-
+             
              tabPanel("review data",
                       # span(HTML("<p style='color:Khaki;'>This particular tab here is still work in progress.</p>")),
                       span(HTML("<p>Here you can review focal sessions that were done on this day. If there is an active session it is selected by default and any other sessions won't be available. If there is no active session: all sessions done so far can be reviewed. If there is no finished session, nothing is displayed.</p>")),
@@ -170,6 +171,8 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   print(getwd())
   observeEvent(input$start_rismapp, start_rismapp())
+  
+  
   
   # get a conditional panel (grooming progress indicator) dependent on reactive values in the server
   output$panelStatus <- reactive({
@@ -441,7 +444,7 @@ server <- function(input, output, session) {
           nn_data$nn_data$in_nn_tracker <<- xxx
         })
       })
-      # cat("--------in 'observe' - nn:---------\n")
+        # cat("--------in 'observe' - nn:---------\n")
       # if (!is.null(nn_data$nn_data)) cat_table(nn_data$nn_data, head = FALSE)
       # cat(unlist(lapply(isolate(nn_data$nn_data$id), function(X)input[[paste0("id_", X)]])), "\n")
     }
@@ -471,10 +474,9 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, inputId = "nav_home", selected = "focal") # shift focus to home tab
   })
 
+  
 
-
-
-
+  
   output$nn_fem <- renderUI({
     if (metadata$session_is_active) {
       # print(metadata$setup_nn_buttons_per_row)

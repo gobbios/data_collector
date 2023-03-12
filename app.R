@@ -651,8 +651,21 @@ server <- function(input, output, session) {
                   ":", 
                   sprintf("%02.f", metadata$focal_start_minute))
       output$focal_session_time_val <- renderUI(HTML(paste(x)))
+      
+      invalidateLater(millis = 1000, session)
+      
+      xxx <- Sys.time()
+      yyy <- round(as.numeric(difftime(strptime(x = x, format = "%R"), xxx, units = "s")))
+      if (yyy > 0) {
+        zzz <- h5(paste("starting in", yyy, "seconds"))
+      } else {
+        zzz <- h5("selected starting time is in the past!", style = "color:red")
+      }
+      output$start_time_count_down <- renderUI(zzz)
     }
   })
+  
+  
   observeEvent(input$incr, {
     x <- update_time_display(metadata, "up")
     metadata$focal_start_minute <- x[2]

@@ -8,12 +8,13 @@ focal_start_session_dialog <- function(potential_focals = NULL, metadata) {
 
     selectInput('focal_name', "focal subject", choices = c("_none", potential_focals), selected = pot),
     h5("select the starting time"),
+    uiOutput("start_time_count_down"),
     splitLayout(cellWidths = c("15%", "20%", "15%"), 
                 actionButton("decr", "", icon = icon("circle-minus")),
                 htmlOutput("focal_session_time_val"),
                 actionButton("incr", "", icon = icon("circle-plus"))
     ),
-    numericInput('focal_duration', 'focal duration', value = metadata$setup_focal_duration_default, min = 2, max = 10, step = 2),
+    numericInput('focal_duration', 'focal duration', value = metadata$setup_focal_duration_default, min = 2, max = 10, step = 1),
 
     footer = tagList(
       actionButton("focal_session_start_abtn", "START", icon = icon("rocket"), style = "background: rgba(0, 255, 0, 0.5); height:100px"),

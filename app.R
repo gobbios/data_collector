@@ -45,7 +45,8 @@ groompartners_temp <- LETTERS
 
 # setup parameters
 # setup_nn_buttons_per_row can be only 4, 6, or 12
-setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 13,
+setuplist <- list(setup_hidecolumns = FALSE, setup_desktopdir = FALSE, 
+                  setup_focal_duration_default = 6, setup_focal_max_consecutive_oos = 5, setup_n_nn_scans = 4,
                   setup_nn_n_age_sex_classes = 5, setup_nn_buttons_per_row = 12) 
 
 
@@ -94,10 +95,13 @@ ui <- fluidPage(
                              hr(),
                              actionButton("finish_focal_session", "finish session"),
                              hr(),
-                             h5("new grooming approach"),
+                             h5("grooming"),
                              uiOutput("groom_ui_1"),
                              uiOutput("groom_ui_2"),
-                             hr()
+                             hr(),
+                             h5("testing multiple nn scans"),
+                             uiOutput("nn_scan_conditional")
+                             
                              
                       ),
                       column(10, "",
@@ -642,6 +646,15 @@ server <- function(input, output, session) {
     session_id_for_display <- paste0(metadata$focal_id, " (", metadata$current_foc_session_id, ")")
     updateSelectInput(inputId = "session_for_review", choices = session_id_for_display, selected = rev(session_id_for_display)[1])
     
+    # create UI for nn scans (experimental)
+    output$nn_scan_conditional <- renderUI({
+      xstyles <- rep("background: rgba(0, 0, 0, 0.5)", metadata$setup_n_nn_scans)
+      xstyles[metadata$nn_scan_no + 1] <- "background: rgba(255, 0, 0, 0.5)"
+      foo <- function(i, curr) if (i < curr) "square-check" else NULL
+      lapply(seq_len(metadata$setup_n_nn_scans), function(i) tags$div(actionButton(paste0("nn_scan_", i, "_abtn"), paste0("nn scan ", i), 
+                                                                                   icon = icon(foo(i, metadata$nn_scan_no + 1)),
+                                                                                   style = xstyles[i])))
+    })
   })
   
   # start session: time display----------------
@@ -680,10 +693,23 @@ server <- function(input, output, session) {
   output$focal_table <- renderRHandsontable({
     if (!is.null(v$foctab)) {
       outtab <- v$foctab
-      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500, 
+      myindex <- NULL # for highlighting of rows with nn scans (to be implemented)
+      
+      outtab <- rhandsontable(outtab, rowHeaders = NULL, height = 500, myindex = myindex,
                               colHeaders = c("sample", "time stamp", "time", "id", "activity", "loud call", "scratches"))
       outtab <- hot_context_menu(outtab, allowRowEdit = FALSE, allowColEdit = FALSE)
       outtab <- hot_col(hot = outtab, col = c("time stamp", "sample"), colWidths = 0.1)
+      
+      outtab <- hot_cols(hot = outtab, renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+          Handsontable.renderers.TextRenderer.apply(this, arguments);
+          if (instance.params) {
+            mhrows = instance.params.myindex;
+            mhrows = mhrows instanceof Array ? mhrows : [mhrows];
+          }
+          if (instance.params && mhrows.includes(row)) td.style.background = 'lightblue';
+          }"
+      )
+      
       outtab
     }
   })

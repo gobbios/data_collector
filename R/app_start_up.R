@@ -5,6 +5,7 @@ save_setup <- function(metadata = NULL, inputlist = NULL, return_item_names = FA
              "setup_desktopdir", 
              "setup_focal_duration_default",
              "setup_focal_max_consecutive_oos",
+             "setup_n_nn_scans",
              "setup_nn_n_age_sex_classes", 
              "setup_nn_buttons_per_row")
   if (return_item_names) return(items)

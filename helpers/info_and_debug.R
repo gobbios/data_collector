@@ -33,8 +33,8 @@ display_meta <- function(x, xdisp) {
   xnames3 <- c("progr_target", "progr_table_lines", "progr_na_vals", "progr_oos", 
                "progr_act", "nn_scan_no", "consecutive_oos")
   xnames4 <- c("setup_hidecolumns", "setup_desktopdir", "setup_focal_duration_default", 
-               "setup_focal_max_consecutive_oos", "setup_nn_n_age_sex_classes",
-               "setup_nn_buttons_per_row")
+               "setup_focal_max_consecutive_oos", "setup_n_nn_scans",
+               "setup_nn_n_age_sex_classes", "setup_nn_buttons_per_row")
   
   xnames5 <- c("day_dir", "data_root_dir", "daily_census", "daily_census_additional", 
                "adlib_aggr", "sessions_log", "day_meta")

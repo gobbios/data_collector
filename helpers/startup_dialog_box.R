@@ -20,11 +20,7 @@ startup_dialog_box <- function(pot_observers, pot_groups, metadata) {
 
 startup_setup_box <- function(setuplist) {
   showModal(modalDialog(title = "setup", easyClose = FALSE,
-                        "these settings won't have any effect for the moment, but will be implemented progressively",
-                        checkboxInput("setup_hidecolumns", "show extra columns",
-                                      value = setuplist$setup_hidecolumns),
-                        checkboxInput("setup_desktopdir", "use 'Desktop/data_collector_data' as data directory", 
-                                      value = setuplist$setup_desktopdir),
+                        "some of these settings won't have any effect for the moment, but will be implemented progressively",
                         numericInput("setup_focal_duration_default", "default number of point samples per focal session", min = 1, max = 600, step = 1, 
                                      value = setuplist$setup_focal_duration_default),
                         numericInput("setup_focal_max_consecutive_oos", "number of consecutive oos sample until focal session abort", min = 1, max = 60, step = 1, 
@@ -33,6 +29,17 @@ startup_setup_box <- function(setuplist) {
                                      value = setuplist$setup_nn_n_age_sex_classes),
                         selectInput("setup_nn_buttons_per_row", "number of columns for nearest neighbour display", choices = c(4, 6, 12), 
                                     selected = setuplist$setup_nn_buttons_per_row),
+                        
+                        hr(),
+                        h4("without effect (inactive, experimental or planned future options)", style = "color: red;"),
+                        numericInput("setup_n_nn_scans", "target number of nn scans per focal sessions", min = 1, max = 10, step = 1, 
+                                     value = setuplist$setup_n_nn_scans),
+                        
+                        checkboxInput("setup_hidecolumns", "show extra columns",
+                                      value = setuplist$setup_hidecolumns),
+                        checkboxInput("setup_desktopdir", "use 'Desktop/data_collector_data' as data directory", 
+                                      value = setuplist$setup_desktopdir),
+                        
                         
                         footer = tagList(
                           actionButton("setup_save", "save"),

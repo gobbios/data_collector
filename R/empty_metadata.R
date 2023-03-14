@@ -6,10 +6,12 @@ empty_metadata <- function(as_pure_list = FALSE, setuplist = NULL) {
                         get_started = FALSE,
                         focal_sessions_so_far = 0,
                         # other setup variables (once set at beginning of collection)
+                        # don't forget to add below to use fallback value
                         setup_hidecolumns = FALSE,
                         setup_desktopdir = FALSE,
                         setup_focal_duration_default = 6,
                         setup_focal_max_consecutive_oos = 5,
+                        setup_n_nn_scans = 0,
                         setup_nn_n_age_sex_classes = 2,
                         setup_nn_buttons_per_row = 6,
                         # paths to active focal session files, if any
@@ -75,6 +77,7 @@ empty_metadata <- function(as_pure_list = FALSE, setuplist = NULL) {
     out$setup_focal_max_consecutive_oos <- setuplist$setup_focal_max_consecutive_oos
     out$setup_nn_n_age_sex_classes <- setuplist$setup_nn_n_age_sex_classes
     out$setup_nn_buttons_per_row <- setuplist$setup_nn_buttons_per_row
+    out$setup_n_nn_scans <- setuplist$setup_n_nn_scans
   }
   
   if (as_pure_list) out <- isolate(reactiveValuesToList(out))

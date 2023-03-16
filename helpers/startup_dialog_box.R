@@ -32,7 +32,7 @@ startup_setup_box <- function(setuplist) {
                         
                         hr(),
                         h4("without effect (inactive, experimental or planned future options)", style = "color: red;"),
-                        numericInput("setup_n_nn_scans", "target number of nn scans per focal sessions", min = 1, max = 10, step = 1, 
+                        numericInput("setup_n_nn_scans", "interval of nn scans (every X minutes)", min = 1, max = 10, step = 1, 
                                      value = setuplist$setup_n_nn_scans),
                         
                         checkboxInput("setup_hidecolumns", "show extra columns",

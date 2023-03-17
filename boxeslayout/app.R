@@ -1,12 +1,12 @@
 library(shiny)
 
 # initial data
-n_cases <- 14 # between 3 and 8
+n_cases <- 18 
 n_cats <- 2
 xdata <- list(xdata = data.frame(btn_ids = paste0("btnid_", letters[1:n_cases]), 
                                  id = letters[1:n_cases], 
-                                 repl = LETTERS[1:n_cases], 
-                                 curr = letters[1:n_cases], 
+                                 # repl = LETTERS[1:n_cases], 
+                                 # curr = letters[1:n_cases], 
                                  is_checked = FALSE,
                                  can_be_displayed = TRUE,
                                  style = 1))
@@ -16,7 +16,9 @@ if (n_cats == 1) {
 if (n_cats == 2) {
   xdata$xdata <- data.frame(rbind(xdata$xdata, xdata$xdata), sex = c(sample(c("f", "m")), sample(c("f", "m"), n_cases - 2, replace = TRUE)), cat = rep(seq_len(n_cats), each = n_cases))
 }
-
+if (n_cats == 3) {
+  xdata$xdata <- data.frame(rbind(xdata$xdata, xdata$xdata, xdata$xdata), sex = c(sample(c("f", "m")), sample(c("f", "m"), n_cases - 2, replace = TRUE)), cat = rep(seq_len(n_cats), each = n_cases))
+}
 xdata$xdata$btn_ids <- paste0(xdata$xdata$btn_ids, "_", xdata$xdata$cat)
 
 
@@ -54,14 +56,23 @@ render_pmat <- function(pmat, xd, sex, xcat, max_per_row) {
     lapply(x, function(X) {
       if (is.na(X)) return(NULL)
       tagAppendAttributes(style = xstyles[xxx$style[X]],
-                          checkboxInput(xxx$btn_ids[X], xxx$curr[X]))
+                          checkboxInput(inputId = xxx$btn_ids[X], label = xxx$id[X])) # , xxx$curr[X]
     })
   })
   
   lapply(o, function(x) tagAppendAttributes(class="shiny-split-layout", div(x)))
 }
 
-ui <- fluidPage(uiOutput("myiu_f1"), uiOutput("myiu_m1"), verbatimTextOutput("debugger"), uiOutput("myiu_f2"), uiOutput("myiu_m2"))
+ui <- fluidPage(column(6, 
+                       verbatimTextOutput("debugger")
+                       ),
+                column(6,
+                       h4("category 1"),
+                       uiOutput("myiu_f1"), uiOutput("myiu_m1"), 
+                       h4("category 2"),
+                       uiOutput("myiu_f2"), uiOutput("myiu_m2")
+                       )
+  )
 
 server <- function(input, output, session) {
   xdata <- reactiveValues(xdata = xdata$xdata)
@@ -88,35 +99,28 @@ server <- function(input, output, session) {
     ival <- input[[oid]]
     i <- which(xdata$xdata$btn_ids == oid)
     print(input[[oid]])
-    # print(paste("step1", xdata$xdata$curr[i]))
     if (ival) {
-      # print(input[[oid]])
-      xdata$xdata$curr[i] <- xdata$xdata$repl[i]
       xdata$xdata$style[i] <- 2
       xdata$xdata$is_checked[i] <- TRUE
       xdata$xdata$can_be_displayed[which(xdata$xdata$id == xdata$xdata$id[i] & xdata$xdata$btn_ids != xdata$xdata$btn_ids[i])] <- FALSE
-      # print(paste("step2", xdata$xdata$curr[i]))
     } else {
-      # if (!ival) {
-      # print(input[[oid]])
-      xdata$xdata$curr[i] <- xdata$xdata$id[i]
       xdata$xdata$style[i] <- 1
       xdata$xdata$is_checked[i] <- FALSE
       xdata$xdata$can_be_displayed[which(xdata$xdata$id == xdata$xdata$id[i] & xdata$xdata$btn_ids != xdata$xdata$btn_ids[i])] <- TRUE
     }
-    updateCheckboxInput(session, inputId = oid, label = xdata$xdata$curr[i], value = input[[oid]])
+    updateCheckboxInput(session, inputId = oid, value = input[[oid]]) # , label = xdata$xdata$curr[i]
     xdata
   }
   
+
   observeEvent(xdata$xdata, once = FALSE, {
     lapply(xdata$xdata$btn_ids, function(oid) {
       observeEvent(input[[oid]], {
         xdata <- foo(input = input, xdata = xdata, oid = oid, session = session)
-        
       })
     })
   })
-  
+
   # observeEvent(xdata$xdata, once = FALSE, {
   #   lapply(xdata$xdata$btn_ids, function(oid) {
   #     observeEvent(input[[oid]], {
